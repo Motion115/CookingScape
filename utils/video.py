@@ -66,9 +66,12 @@ class Video:
         if not os.path.exists('.cache/' + self.file_name + "/scene"):
             print(f"- Detecting scene")
             storage_path = os.path.join('.cache/' + self.file_name, "scene/")
+            storage_clip_path = os.path.join('.cache/' + self.file_name, "clip/")
             # create this folder
             if not os.path.exists(storage_path):
                 os.makedirs(storage_path)
+            if not os.path.exists(storage_clip_path):
+                os.makedirs(storage_clip_path)
             video_path = os.path.join('.cache/' + self.file_name, self.file_name + '.mp4')
             scene_list, video_stream = self._find_scenes(video_path, storage_path)
             scenedetect.scene_manager.save_images(
@@ -81,6 +84,8 @@ class Video:
             with open('.cache/' + self.file_name + '/scene_list.csv', 'w') as f:
                 scenedetect.scene_manager.write_scene_list(f, scene_list, include_cut_list=False)
                 f.close()
+            scenedetect.video_splitter.split_video_ffmpeg(video_path, scene_list,  
+                    output_file_template=storage_clip_path+'$VIDEO_NAME-Scene-$SCENE_NUMBER.mp4')
         else:
             print(f"- Scene already exists for {self.file_name}.mp4")
 
