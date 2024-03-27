@@ -1,7 +1,10 @@
 from utils.video import Video
 from utils.MIL_NCE import MIL_NCE
-from utils.LM_hook import GLM, Qwen1_8
+from utils.LM_hook import GLM_langchain, Qwen1_8
+from generateToken import getToken
 import os
+
+# This is a test for the system backend
 
 if __name__ == "__main__":
     video = Video(
@@ -9,16 +12,19 @@ if __name__ == "__main__":
         file_name="Steak-GR", 
         encoding=".mp4",
         ASR_model_path="E:/Data(E)/Models/Openai-Whisper")
-    # # video = Video(
-    # #     file_path="./data/Coq_au_vin/",
-    # #     file_name= "Coq_au_vin_Donnie_Brasco", 
-    # #     encoding=".mp4",
-    # #     ASR_model_path="E:/Data(E)/Models/Openai-Whisper")
+    # video = Video(
+    #     file_path="./data/Coq_au_vin/",
+    #     file_name= "Coq_au_vin_Donnie_Brasco", 
+    #     encoding=".mp4",
+    #     ASR_model_path="E:/Data(E)/Models/Openai-Whisper")
     transcript = video.get_transcript()
     transcript = transcript[0]
     # print(transcript)
 
-    glm_api = GLM("./utils/api_config.json")
+    # glm_api = GLM("./utils/api_config.json")
+
+    glm4 = GLM_langchain(token=getToken("./utils/api_config.json"))
+    glm4.call(transcript)
     # glm_api.call_once(f'''
                       
     #     ```{transcript}```
@@ -38,19 +44,19 @@ if __name__ == "__main__":
     #     print(vid, sim)
 
 
-    agent = Qwen1_8(model_directory="E:/Data(E)/Models/Qwen-1.8B/Qwen-1_8B-Chat-Int4")
-    resp = agent.call(
-        context=f'''A cooking process can be divided into 3 phases: preparation, cooking, and assembly. \n \
-                    \n \
-                    The following is a transcript of a cooking video. First, extract all the subtasks. Secondly, group the subtasks into the 3 phases mentioned before. \n \
-                    \n \
-                    ``` \n \
-                    {transcript}\n
-                    ```\
-                ''',
-        system_instruction=""
-    )
-    print(resp)
+    # agent = Qwen1_8(model_directory="E:/Data(E)/Models/Qwen-1.8B/Qwen-1_8B-Chat-Int4")
+    # resp = agent.call(
+    #     context=f'''A cooking process can be divided into 3 phases: preparation, cooking, and assembly. \n \
+    #                 \n \
+    #                 The following is a transcript of a cooking video. First, extract all the subtasks. Secondly, group the subtasks into the 3 phases mentioned before. \n \
+    #                 \n \
+    #                 ``` \n \
+    #                 {transcript}\n
+    #                 ```\
+    #             ''',
+    #     system_instruction=""
+    # )
+    # print(resp)
 
     # for t in transcript:
     #     resp = agent.call(
