@@ -1,8 +1,9 @@
 from utils.video import Video
 from utils.MIL_NCE import MIL_NCE
 from utils.LM_hook import GLM_langchain, Qwen1_8
-from generateToken import getToken
-import os
+from utils.zhipu.generateToken import getToken
+from utils.foodNER import ingredientsNER
+import json, os
 
 # This is a test for the system backend
 
@@ -24,24 +25,50 @@ if __name__ == "__main__":
     # glm_api = GLM("./utils/api_config.json")
 
     glm4 = GLM_langchain(token=getToken("./utils/api_config.json"))
-    glm4.call(transcript)
-    # glm_api.call_once(f'''
-                      
-    #     ```{transcript}```
-    # ''')
+    # cookingSteps = glm4.call(transcript)
 
-    # visual_language_grounding = MIL_NCE(
-    #     weight_filepath="utils/S3D/s3d_howto100m.pth",
-    #     dictionary_filepath="utils/S3D/s3d_dict.npy")
+    # # save cooking steps as json
+    # with open("./cookingSteps.json", "w") as f:
+    #     json.dump(cookingSteps, f)
+
+    # load cookingSteps.json
+    with open("./cookingSteps.json", "r") as f:
+        cookingSteps = json.load(f)
+
+    # print(cookingSteps)
+    print("- Extracting Food Entities")
+
+    # foodEntities = set()
+    # for key, value in cookingSteps.items():
+    #     for sentence in value:
+    #         foodEntities = set(ingredientsNER(sentence)) | foodEntities
     
-    # videos = os.listdir(".cache/Steak-GR/clip/")
-    # for vid in videos:
-    #     vid_tensor = visual_language_grounding._transform_video(".cache/Steak-GR/clip/" + vid)
-    #     text_input = "Sear steak"
-    #     tv = visual_language_grounding.get_text_encoding(text_input)
-    #     vv, v_long = visual_language_grounding.get_video_encoding(vid_tensor)
-    #     sim = visual_language_grounding.calc_similarity(vv, tv)
-    #     print(vid, sim)
+    # print(foodEntities)
+
+
+    visual_language_grounding = MIL_NCE(
+        weight_filepath="utils/S3D/s3d_howto100m.pth",
+        dictionary_filepath="utils/S3D/s3d_dict.npy")
+    
+    videos = os.listdir(".cache/Steak-GR/clip/")
+    if len(videos) > 999:
+        print("Clips exceeding 1000, check sorting of clips to avoid wrong mapping!")
+        exit()
+        
+    print("- Extracting Video Features")
+    vid_encoding = visual_language_grounding.get_stacked_encoding(".cache/Steak-GR/clip/", videos)
+    print(vid_encoding.shape)
+
+    # preparation stage
+    text_prep_mat = visual_language_grounding.get_stacked_text_encoding(cookingSteps["preparation"])
+    print(text_prep_mat.shape)
+
+    # calculation of similarity
+    sim_prep_mat = visual_language_grounding.calc_similarity(text_mat=text_prep_mat, vid_mat=vid_encoding)
+    print(sim_prep_mat.shape)
+
+    # get maximum id for each row
+    # test = sim_prep_mat.argmax(axis=1)
 
 
     # agent = Qwen1_8(model_directory="E:/Data(E)/Models/Qwen-1.8B/Qwen-1_8B-Chat-Int4")

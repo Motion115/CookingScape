@@ -89,11 +89,9 @@ class GLM_langchain:
             | listParser
         )
 
-        a = chain.invoke(transcript)
-        print(a)
+        cookingStepsRaw = chain.invoke(transcript)
 
-        #b = ingredientProcessorChain.invoke(a)
-        #print(b)
+        # ingredientList = ingredientProcessorChain.invoke(cookingStepsRaw)
 
         json_parser = JsonOutputParser(pydantic_object=CookingSteps)
 
@@ -119,10 +117,8 @@ class GLM_langchain:
             | json_parser
         )
         
-        c = cookStepOrganizerChain.invoke(a)
-        print(c)
-
-        # extract
+        cookingStepsFormatted = cookStepOrganizerChain.invoke(cookingStepsRaw)
+        return cookingStepsFormatted
 
 
 class Qwen1_8:
