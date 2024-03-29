@@ -17,22 +17,15 @@ const App: React.FC = () => {
         </Header>
         <Content style={{ padding: "2%", margin: "0 auto" }}>
           <Layout dir="vertical">
-            <Row>
+            <Row gutter={[16, 24]}>
               <Col span={12}>
                 <VideoPlayer />
-                
               </Col>
-              <Col span={12}>
-                Ingredient canvas
-              </Col>
+              <Col span={12}>Ingredient canvas</Col>
             </Row>
-            <Row>
-              <Col span={12}>
-                Step-by-step canvas
-              </Col>
-              <Col span={12}>
-                milestone canvas
-              </Col>
+            <Row gutter={[16, 24]}>
+              <Col span={12}>Step-by-step canvas</Col>
+              <Col span={12}>milestone canvas</Col>
             </Row>
           </Layout>
         </Content>
