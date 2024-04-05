@@ -22,7 +22,7 @@ Web-based, large parameter size LLM
 - ChatGLM @ Tsinghua KEG Group & Zhipu AI
 
 Requires local implementation
-- Qwen-1.8B-chat-int4 @ Alibaba / GPU: any GPU w/ more than 4G VRAM
+- Qwen-1.8B-chat-int4 @ Alibaba / GPU: any Nvidia GPU w/ more than 4G VRAM
 '''
 
 class CookingSteps(BaseModel):
@@ -40,19 +40,19 @@ class GLM_langchain:
             temperature=0.01
         )
 
-    def call(self, transcript):
+    def getCookingSteps(self, transcript):
         cookingStepsProcessor = PromptTemplate(
             input_variables=["transcript"],
             template='''
                 You are a helpful assistant. You will be provided with the transcript of a cooking video.
                 Your task is to divide the cooking into 3 phases: preparation, cooking, and assembly.\
                 
-                Preparation is the stage where raw ingredients are prepared, such as mixing, chopping, and grating etc. No heating is allowed during this stage.\
-                Cooking is the stage where ingredients are cooked, such as boiling, frying, and baking etc.\
+                Preparation is the stage where raw ingredients are prepared, such as mixing, chopping, grating, etc. No heating is allowed during this stage.\
+                Cooking is the stage where ingredients are cooked, such as boiling, frying, baking, etc.\
                 Assembly is the stage where cooked ingredients are assembled into a finished dish.\
                 
-                Think step by step. First, Write the subtasks in its unit form, which means no further separtaion can be found in this process.
-                Then, after extracting all the subtasks, try to categorize the step into preparation, cooking, and assembly.
+                Think step by step. First, Write the subtasks in their unit form, which means no further separation can be found in this process.
+                Then, after extracting all the subtasks, try to categorize the steps into preparation, cooking, and assembly.
                 
                 Transcript:{transcript}
             ''',
@@ -65,33 +65,7 @@ class GLM_langchain:
             | output_parser
         )
 
-        listParser = CommaSeparatedListOutputParser()
-        format_instructions = listParser.get_format_instructions()
-
-        ingredientProcessor = PromptTemplate(
-            input_variables=["summarySteps"],
-            template='''
-                You are a helpful assistant. You will be provided with the steps of cooking a dish.
-                Your task is to extract the ingredients from the steps.
-
-                Steps:{summarySteps}
-
-                Supress any non-ingredient text. Return with ingredients separated by commas, do not return punctuations other than commas.
-            ''',
-            partial_variables={"format_instructions": format_instructions},
-        )
-
-
-        ingredientProcessorChain = (
-            {"summarySteps": RunnablePassthrough()}
-            | ingredientProcessor
-            | self.llm
-            | listParser
-        )
-
         cookingStepsRaw = chain.invoke(transcript)
-
-        # ingredientList = ingredientProcessorChain.invoke(cookingStepsRaw)
 
         json_parser = JsonOutputParser(pydantic_object=CookingSteps)
 
@@ -120,6 +94,24 @@ class GLM_langchain:
         cookingStepsFormatted = cookStepOrganizerChain.invoke(cookingStepsRaw)
         return cookingStepsFormatted
 
+
+"""
+        listParser = CommaSeparatedListOutputParser()
+        format_instructions = listParser.get_format_instructions()
+
+        ingredientProcessor = PromptTemplate(
+            input_variables=["summarySteps"],
+            template='''
+                You are a helpful assistant. You will be provided with the steps of cooking a dish.
+                Your task is to extract the ingredients from the steps.
+
+                Steps:{summarySteps}
+
+                Supress any non-ingredient text. Return with ingredients separated by commas, do not return punctuations other than commas.
+            ''',
+            partial_variables={"format_instructions": format_instructions},
+        )
+"""
 
 class Qwen1_8:
     def __init__(self, model_directory):

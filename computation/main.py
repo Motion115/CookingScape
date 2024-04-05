@@ -2,74 +2,88 @@ from utils.video import Video
 from utils.MIL_NCE import MIL_NCE
 from utils.LM_hook import GLM_langchain, Qwen1_8
 from utils.zhipu.generateToken import getToken
-from utils.foodNER import ingredientsNER
+from utils.foodNER import foodNER
 import json, os
 
-# This is a test for the system backend
+def instructional_cooking_video_knowledge_extraction_computation_pipeline(
+    video_file_path: str,
+    video_name: str, # without encoding
+    video_encoding: str,
+    whisper_ASR_model_path: str,
+    glm_token_file: str,
+    persistent_calc = False
+):
+    video_info_directory = f"./.cache/{video_name}"
+    # Check if the video have been processed before
+    if os.path.exists(f"{video_info_directory}/video_info.json") and persistent_calc == False:
+        # here we did not check further content validity
+        print("- Cached video info exist, skipping ...")
+        return
+
+    videoPreprocessingModel = Video(
+        file_path=video_file_path,
+        file_name=video_name, 
+        encoding=video_encoding,
+        ASR_model_path=whisper_ASR_model_path)
+    
+    transcript = videoPreprocessingModel.get_transcript()[0]
+
+    print("- Extracting Cooking Steps")
+    languageModel_GLM = GLM_langchain(token=getToken(glm_token_file))
+    # milestonedCookingSteps = languageModel_GLM.getCookingSteps(transcript)
+
+    # # save cooking steps as json
+    # with open("./cookingSteps.json", "w") as f:
+    #     json.dump(milestonedCookingSteps, f)
+
+    # load cookingSteps.json
+    with open("./cookingSteps.json", "r") as f:
+        milestonedCookingSteps = json.load(f)
+
+    # print(milestonedCookingSteps)
+    print("- Extracting Food Entities")
+    foodEntityRecognition = foodNER()
+    ingredientsList = foodEntityRecognition.extractEntityFromSteps(milestonedCookingSteps)
+
+
+    visionLanguageModel = MIL_NCE(
+        weight_filepath="utils/S3D/s3d_howto100m.pth",
+        dictionary_filepath="utils/S3D/s3d_dict.npy",
+        video_filepath=".cache/Steak-GR/")
+            
+    tagged_cooking_steps = visionLanguageModel.regrouped_steps_vidtag(milestonedCookingSteps)
+    tagged_ingredients = visionLanguageModel.ingredients_vidtag(ingredientsList)
+
+    # TODO: get a sequential step version (modify the LM_hook with additional function)
+    # TODO: sanity check the ingredients to its raw form (use LM to perform this task)
+    # TODO: get the scene interval data into the video_info_dict
+
+    # merge ingredients and cooking steps into one dict
+    video_info_dict = {
+        "chronological_steps": "",
+        "regrouped_steps": tagged_cooking_steps,
+        "ingredients": tagged_ingredients
+    }
+
+    # to json
+    with open(f"{video_info_directory}/video_info.json", "w") as f:
+        json.dump(video_info_dict, f)
 
 if __name__ == "__main__":
-    video = Video(
-        file_path="./data/",
-        file_name="Steak-GR", 
-        encoding=".mp4",
-        ASR_model_path="E:/Data(E)/Models/Openai-Whisper")
+    instructional_cooking_video_knowledge_extraction_computation_pipeline(
+        video_file_path="./data/",
+        video_name="Steak-GR",
+        video_encoding=".mp4",
+        whisper_ASR_model_path="E:/Data(E)/Models/Openai-Whisper",
+        glm_token_file="./utils/api_config.json",
+        persistent_calc=True
+    )
+
     # video = Video(
     #     file_path="./data/Coq_au_vin/",
     #     file_name= "Coq_au_vin_Donnie_Brasco", 
     #     encoding=".mp4",
     #     ASR_model_path="E:/Data(E)/Models/Openai-Whisper")
-    transcript = video.get_transcript()
-    transcript = transcript[0]
-    # print(transcript)
-
-    # glm_api = GLM("./utils/api_config.json")
-
-    glm4 = GLM_langchain(token=getToken("./utils/api_config.json"))
-    # cookingSteps = glm4.call(transcript)
-
-    # # save cooking steps as json
-    # with open("./cookingSteps.json", "w") as f:
-    #     json.dump(cookingSteps, f)
-
-    # load cookingSteps.json
-    with open("./cookingSteps.json", "r") as f:
-        cookingSteps = json.load(f)
-
-    # print(cookingSteps)
-    print("- Extracting Food Entities")
-
-    # foodEntities = set()
-    # for key, value in cookingSteps.items():
-    #     for sentence in value:
-    #         foodEntities = set(ingredientsNER(sentence)) | foodEntities
-    
-    # print(foodEntities)
-
-
-    visual_language_grounding = MIL_NCE(
-        weight_filepath="utils/S3D/s3d_howto100m.pth",
-        dictionary_filepath="utils/S3D/s3d_dict.npy")
-    
-    videos = os.listdir(".cache/Steak-GR/clip/")
-    if len(videos) > 999:
-        print("Clips exceeding 1000, check sorting of clips to avoid wrong mapping!")
-        exit()
-        
-    print("- Extracting Video Features")
-    vid_encoding = visual_language_grounding.get_stacked_encoding(".cache/Steak-GR/clip/", videos)
-    print(vid_encoding.shape)
-
-    # preparation stage
-    text_prep_mat = visual_language_grounding.get_stacked_text_encoding(cookingSteps["preparation"])
-    print(text_prep_mat.shape)
-
-    # calculation of similarity
-    sim_prep_mat = visual_language_grounding.calc_similarity(text_mat=text_prep_mat, vid_mat=vid_encoding)
-    print(sim_prep_mat.shape)
-
-    # get maximum id for each row
-    # test = sim_prep_mat.argmax(axis=1)
-
 
     # agent = Qwen1_8(model_directory="E:/Data(E)/Models/Qwen-1.8B/Qwen-1_8B-Chat-Int4")
     # resp = agent.call(
