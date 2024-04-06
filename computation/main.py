@@ -11,6 +11,8 @@ def instructional_cooking_video_knowledge_extraction_computation_pipeline(
     video_encoding: str,
     whisper_ASR_model_path: str,
     glm_token_file: str,
+    vlm_weight_path: str,
+    vlm_dictionary_filepath: str,
     persistent_calc = False
 ):
     video_info_directory = f"./.cache/{video_name}"
@@ -31,43 +33,55 @@ def instructional_cooking_video_knowledge_extraction_computation_pipeline(
     print("- Extracting Cooking Steps")
     languageModel_GLM = GLM_langchain(token=getToken(glm_token_file))
     # milestonedCookingSteps = languageModel_GLM.getCookingSteps(transcript)
+    # sequentialCookingSteps = languageModel_GLM.getSequentialCookingSteps(transcript)
 
     # # save cooking steps as json
-    # with open("./cookingSteps.json", "w") as f:
-    #     json.dump(milestonedCookingSteps, f)
+    # with open("./seqCookingSteps.json", "w") as f:
+    #     json.dump(sequentialCookingSteps, f)
 
     # load cookingSteps.json
     with open("./cookingSteps.json", "r") as f:
         milestonedCookingSteps = json.load(f)
 
+    with open("./seqCookingSteps.json", "r") as f:
+        sequentialCookingSteps = json.load(f)
+
+    cookingStepsTotal = milestonedCookingSteps
+    cookingStepsTotal["sequential"] = sequentialCookingSteps
+
     # print(milestonedCookingSteps)
     print("- Extracting Food Entities")
     foodEntityRecognition = foodNER()
-    ingredientsList = foodEntityRecognition.extractEntityFromSteps(milestonedCookingSteps)
-
+    ingredientsList = foodEntityRecognition.extractEntityFromSteps(
+        cookingSteps = cookingStepsTotal,
+        isLemmantize = True)
+    
+    # print(ingredientsList)
+    
+    # languageModel_GLM.backtraceIngredients(ingredientsList, sequentialCookingSteps)
 
     visionLanguageModel = MIL_NCE(
-        weight_filepath="utils/S3D/s3d_howto100m.pth",
-        dictionary_filepath="utils/S3D/s3d_dict.npy",
-        video_filepath=".cache/Steak-GR/")
-            
+        weight_filepath = vlm_weight_path,
+        dictionary_filepath = vlm_dictionary_filepath,
+        video_filepath = f".cache/{video_name}/")
+
     tagged_cooking_steps = visionLanguageModel.regrouped_steps_vidtag(milestonedCookingSteps)
     tagged_ingredients = visionLanguageModel.ingredients_vidtag(ingredientsList)
 
-    # TODO: get a sequential step version (modify the LM_hook with additional function)
     # TODO: sanity check the ingredients to its raw form (use LM to perform this task)
+        # - Does not work very well, need further consideration
     # TODO: get the scene interval data into the video_info_dict
 
     # merge ingredients and cooking steps into one dict
     video_info_dict = {
-        "chronological_steps": "",
-        "regrouped_steps": tagged_cooking_steps,
+        "steps": tagged_cooking_steps,
         "ingredients": tagged_ingredients
     }
 
     # to json
     with open(f"{video_info_directory}/video_info.json", "w") as f:
         json.dump(video_info_dict, f)
+
 
 if __name__ == "__main__":
     instructional_cooking_video_knowledge_extraction_computation_pipeline(
@@ -76,6 +90,8 @@ if __name__ == "__main__":
         video_encoding=".mp4",
         whisper_ASR_model_path="E:/Data(E)/Models/Openai-Whisper",
         glm_token_file="./utils/api_config.json",
+        vlm_weight_path="utils/S3D/s3d_howto100m.pth",
+        vlm_dictionary_filepath="utils/S3D/s3d_dict.npy",
         persistent_calc=True
     )
 

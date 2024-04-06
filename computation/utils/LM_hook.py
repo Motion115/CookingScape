@@ -11,7 +11,7 @@ from langchain_core.prompts.chat import (
     SystemMessagePromptTemplate,
 )
 from langchain_openai import ChatOpenAI
-from langchain_core.output_parsers import StrOutputParser, CommaSeparatedListOutputParser, JsonOutputParser
+from langchain_core.output_parsers import StrOutputParser, CommaSeparatedListOutputParser, JsonOutputParser, NumberedListOutputParser, MarkdownListOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.pydantic_v1 import BaseModel, Field
 
@@ -25,10 +25,12 @@ Requires local implementation
 - Qwen-1.8B-chat-int4 @ Alibaba / GPU: any Nvidia GPU w/ more than 4G VRAM
 '''
 
+
 class CookingSteps(BaseModel):
     preparation: str = Field(description="Content under preparation phase")
     cooking: str = Field(description="Content under cooking phase")
     assembly: str = Field(description="Content under assembly phase")
+
 
 class GLM_langchain:
     def __init__(self, token):
@@ -37,8 +39,77 @@ class GLM_langchain:
             openai_api_base="https://open.bigmodel.cn/api/paas/v4",
             openai_api_key=token,
             streaming=False,
-            temperature=0.01
+            temperature=0.01,
         )
+
+    def backtraceIngredients(self, ingredientsList, recipeList):
+        '''
+        Deprecated function. LLMs perform not well with ingredients work.
+        '''
+        ingredientsStr = ", ".join(ingredientsList)
+        recipeStr = " ".join(recipeList)
+        # definition of ingredients from collins dictionary
+        ingredientProcessor = PromptTemplate(
+            input_variables=["ingredientsStr"],
+            template='''
+                You are a helpful assistant.\
+                You will be provided with some food entities extracted from a recipe.\
+                Your task is to identify which of them are ingredients using the following definition.\
+
+                Definition: Ingredients are the things that are used to make something, especially all the different foods you use when you are cooking a particular dish.\
+                Ingredients should be in its raw form, the outcomes that is made from ingredients should not be classified as ingredients.\
+                Additionally, ingredients used to make the sides of a dish should also be included.\
+
+                Think step-by-step:\
+                - First, read the recipe script provided to get the context of the recipe.\
+                - Then, analyze with consideration of the recipe whether the each food entity align with the definition.\
+                Provide your thinking process in the analysis.
+
+                Recipe: {recipeStr}
+
+                Ingredients: {ingredientsStr}
+            ''',
+            # partial_variables={"format_instructions": format_instructions},
+        )
+        chain = (
+            {"ingredientsStr": RunnablePassthrough(),
+             "recipeStr": RunnablePassthrough()}
+            | ingredientProcessor
+            | self.llm
+            | StrOutputParser()
+        )
+        analysisScript = chain.invoke({
+            "ingredientsStr": ingredientsStr,
+            "recipeStr": recipeStr})
+
+        # print(analysisScript)
+
+        listParser = MarkdownListOutputParser()
+        listParserInstruction = listParser.get_format_instructions()
+        ingredientsExtractor = PromptTemplate(
+            input_variables=["anaylsisResult"],
+            template='''
+                You are a helpful assistant.
+                Your task is to read the analysis script and extract the ingredients in the recipe.
+
+                You should return the result without the analysis.\
+                Meanwhile, correct the name of the ingredients if it is not aligned with the convention.\
+                Use bullet points to separate the ingredients.
+
+                Analysis: {analysisResult}
+            ''',
+            partial_variables={"format_instructions": listParserInstruction},
+        )
+
+        ingredientsExtractorChain = (
+            {"analysisResult": RunnablePassthrough()}
+            | ingredientsExtractor
+            | self.llm
+            | listParser
+        )
+        renewedIngredientList = ingredientsExtractorChain.invoke(analysisScript)
+        # print(renewedIngredientList)
+        return renewedIngredientList
 
     def getCookingSteps(self, transcript):
         cookingStepsProcessor = PromptTemplate(
@@ -59,7 +130,7 @@ class GLM_langchain:
         )
         output_parser = StrOutputParser()
         chain = (
-            {"transcript": RunnablePassthrough()} 
+            {"transcript": RunnablePassthrough()}
             | cookingStepsProcessor
             | self.llm
             | output_parser
@@ -81,7 +152,8 @@ class GLM_langchain:
                 Content: 
                 {description}
             ''',
-            partial_variables={"format_instructions": json_parser.get_format_instructions()},
+            partial_variables={
+                "format_instructions": json_parser.get_format_instructions()},
         )
 
         cookStepOrganizerChain = (
@@ -90,9 +162,32 @@ class GLM_langchain:
             | self.llm
             | json_parser
         )
-        
+
         cookingStepsFormatted = cookStepOrganizerChain.invoke(cookingStepsRaw)
         return cookingStepsFormatted
+
+    def getSequentialCookingSteps(self, transcript):
+        numberedListParser = NumberedListOutputParser()
+        formatInstruction = numberedListParser.get_format_instructions()
+        cookingStepsProcessor = PromptTemplate(
+            input_variables=["transcript"],
+            template='''
+                You are a helpful assistant. You will be provided with the transcript of a cooking video.
+                Your task is to provide a step-by-step summary of the recipe.\
+                Use approximately 10 words to describe each step.
+                                
+                Transcript:{transcript}
+            ''',
+            partial_variables={"format_instructions": formatInstruction},
+        )
+        chain = (
+            {"transcript": RunnablePassthrough()}
+            | cookingStepsProcessor
+            | self.llm
+            | numberedListParser
+        )
+        cookingSteps = chain.invoke(transcript)
+        return cookingSteps
 
 
 """
@@ -113,18 +208,20 @@ class GLM_langchain:
         )
 """
 
+
 class Qwen1_8:
     def __init__(self, model_directory):
         self.model_directory = model_directory
         self.tokenizer, self.model = self.load_model()
 
     def load_model(self):
-        tokenizer = AutoTokenizer.from_pretrained(self.model_directory, trust_remote_code=True)
+        tokenizer = AutoTokenizer.from_pretrained(
+            self.model_directory, trust_remote_code=True)
         # Since transformers 4.35.0, the GPT-Q/AWQ model can be loaded using AutoModelForCausalLM.
         model = AutoModelForCausalLM.from_pretrained(
             self.model_directory,
             device_map="cuda:0",
-            torch_dtype='auto', 
+            torch_dtype='auto',
             # top_p=0.8,
             # temperature=0.1,
             trust_remote_code=True
@@ -134,5 +231,6 @@ class Qwen1_8:
     def call(self, context, system_instruction=""):
         # clear cache with torch
         torch.cuda.empty_cache()
-        response, history = self.model.chat(self.tokenizer, context, history=None, system=system_instruction)
+        response, history = self.model.chat(
+            self.tokenizer, context, history=None, system=system_instruction)
         return response

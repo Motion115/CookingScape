@@ -92,7 +92,7 @@ class MIL_NCE:
     def regrouped_steps_vidtag(self, steps_dict):
         """
         Input:
-         - steps_dict: containing three stages (preparation, cooking, assembly) as key, the value is a list of the steps
+         - steps_dict: containing three stages (preparation, cooking, assembly) as key & sequential as key, the value is a list of the steps
 
         Output:
          - steps_dict_new: containing the same stages, but the value is a dict also:
@@ -104,15 +104,22 @@ class MIL_NCE:
         steps_dict_new = {
             "preparation": {},
             "cooking": {},
-            "assembly": {}
+            "assembly": {},
+            "sequential": {}
         }
+        # determine the k value
+        if 10 < self.video_embedding.shape[0]:
+            k_val = 10
+        else:
+            k_val = self.video_embedding.shape[0]
+
         for key, steps_in_stage in steps_dict.items():
             # get the text embedding
             text_mat = self.get_stacked_text_encoding(steps_in_stage)
             # calculate the similarity between video and text
             similarity = self.calc_similarity(text_mat, self.video_embedding)
             # get the top-k similarity
-            topk_values, topk_indices = torch.topk(similarity, 3, dim=1)
+            topk_values, topk_indices = torch.topk(similarity, k_val, dim=1)
             # add 1 on all elements to match indexing
             topk_indices = topk_indices + 1
             for i in range(0, len(steps_in_stage)):
