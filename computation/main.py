@@ -3,17 +3,21 @@ from utils.MIL_NCE import MIL_NCE
 from utils.LM_hook import GLM_langchain, Qwen1_8
 from utils.zhipu.generateToken import getToken
 from utils.foodNER import foodNER
-import json, os
+import json
+import os
+import pandas as pd
+from datetime import datetime, timedelta
+
 
 def instructional_cooking_video_knowledge_extraction_computation_pipeline(
     video_file_path: str,
-    video_name: str, # without encoding
+    video_name: str,  # without encoding
     video_encoding: str,
     whisper_ASR_model_path: str,
     glm_token_file: str,
     vlm_weight_path: str,
     vlm_dictionary_filepath: str,
-    persistent_calc = False
+    persistent_calc=False
 ):
     video_info_directory = f"./.cache/{video_name}"
     # Check if the video have been processed before
@@ -22,12 +26,24 @@ def instructional_cooking_video_knowledge_extraction_computation_pipeline(
         print("- Cached video info exist, skipping ...")
         return
 
+    # read the scene list
+    scene_list = pd.read_csv(f"{video_info_directory}/scene_list.csv")
+    # Convert the "Start Timecode" column to timedelta
+    scene_list["Start Timecode"] = pd.to_timedelta(
+        scene_list["Start Timecode"]).dt.total_seconds()
+    selected_columns = scene_list[[
+        "Scene Number", "Start Timecode", "Length (seconds)"]]
+    # rename the columns
+    selected_columns.columns = ["id", "startTime", "duration"]
+    # pivot to dictionary
+    video_info_dict = selected_columns.set_index('id').to_dict(orient='index')
+
     videoPreprocessingModel = Video(
         file_path=video_file_path,
-        file_name=video_name, 
+        file_name=video_name,
         encoding=video_encoding,
         ASR_model_path=whisper_ASR_model_path)
-    
+
     transcript = videoPreprocessingModel.get_transcript()[0]
 
     print("- Extracting Cooking Steps")
@@ -53,29 +69,32 @@ def instructional_cooking_video_knowledge_extraction_computation_pipeline(
     print("- Extracting Food Entities")
     foodEntityRecognition = foodNER()
     ingredientsList = foodEntityRecognition.extractEntityFromSteps(
-        cookingSteps = cookingStepsTotal,
-        isLemmantize = True)
-    
+        cookingSteps=cookingStepsTotal,
+        isLemmantize=True)
+
     # print(ingredientsList)
-    
+
     # languageModel_GLM.backtraceIngredients(ingredientsList, sequentialCookingSteps)
 
     visionLanguageModel = MIL_NCE(
-        weight_filepath = vlm_weight_path,
-        dictionary_filepath = vlm_dictionary_filepath,
-        video_filepath = f".cache/{video_name}/")
+        weight_filepath=vlm_weight_path,
+        dictionary_filepath=vlm_dictionary_filepath,
+        video_filepath=f".cache/{video_name}/")
 
-    tagged_cooking_steps = visionLanguageModel.regrouped_steps_vidtag(milestonedCookingSteps)
-    tagged_ingredients = visionLanguageModel.ingredients_vidtag(ingredientsList)
+    tagged_cooking_steps = visionLanguageModel.regrouped_steps_vidtag(
+        milestonedCookingSteps)
+    tagged_ingredients = visionLanguageModel.ingredients_vidtag(
+        ingredientsList)
 
     # TODO: sanity check the ingredients to its raw form (use LM to perform this task)
-        # - Does not work very well, need further consideration
+    # - Does not work very well, need further consideration
     # TODO: get the scene interval data into the video_info_dict
 
     # merge ingredients and cooking steps into one dict
     video_info_dict = {
         "steps": tagged_cooking_steps,
-        "ingredients": tagged_ingredients
+        "ingredients": tagged_ingredients,
+        "scene_list": video_info_dict
     }
 
     # to json
@@ -97,7 +116,7 @@ if __name__ == "__main__":
 
     # video = Video(
     #     file_path="./data/Coq_au_vin/",
-    #     file_name= "Coq_au_vin_Donnie_Brasco", 
+    #     file_name= "Coq_au_vin_Donnie_Brasco",
     #     encoding=".mp4",
     #     ASR_model_path="E:/Data(E)/Models/Openai-Whisper")
 
