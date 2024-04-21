@@ -1,10 +1,10 @@
 import React, { useEffect } from "react";
 import { Layout, ConfigProvider, Typography, Row, Col, Button } from "antd";
 import THEME from "./looks/theme";
-import VideoPlayer from "./components/videoPlayer";
-import IngredientMap from "./components/IngredientMap";
-import RecipeSteps from "./components/RecipeSteps";
-import MilestoneSteps from "./components/MilestoneSteps";
+import VideoPlayer from "./modules/videoPlayer";
+import IngredientMap from "./modules/IngredientMap";
+import RecipeSteps from "./modules/RecipeSteps";
+import MilestoneSteps from "./modules/MilestoneSteps";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "./store";
 import { loadDataAsync } from "./reducers/setDataReducer";
@@ -39,7 +39,7 @@ const App: React.FC = () => {
                 <VideoPlayer />
               </Col>
               <Col span={12}>
-                <IngredientMap />
+                <MilestoneSteps />
               </Col>
             </Row>
             <Row gutter={[16, 24]}>
@@ -47,7 +47,7 @@ const App: React.FC = () => {
                 <RecipeSteps />
               </Col>
               <Col span={12}>
-                <MilestoneSteps />
+                <IngredientMap />
               </Col>
             </Row>
           </Layout>

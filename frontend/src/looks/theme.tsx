@@ -1,7 +1,7 @@
 const THEME = {
   token: {
-    // colorPrimary: "#B3E5FC",
-    colorPrimary: "rgb(200, 200, 200)",
+    colorPrimary: "#00B96B",
+    // colorPrimary: "rgb(200, 200, 200)",
     colorBgLayout: "#ffffff",
     borderRadius: 4,
     fontSize: 16,
@@ -28,6 +28,9 @@ const THEME = {
       handleActiveColor: "#000000",
       dotBorderColor: "#000000",
       dotActiveBorderColor: "#000000",
+    },
+    Tag: {
+      defaultBg: "#fafafa",
     },
   },
 };

@@ -1,13 +1,9 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import { CookingStage, NaviInfo } from "../types/InfoTypes";
 
-interface setDataState {
-  steps: Object;
-  ingredients: Object;
-  sceneList: Object;
-}
 
-export const initialState: setDataState = {
-  steps: {},
+export const initialState: NaviInfo = {
+  steps: {} as CookingStage,
   ingredients: {},
   sceneList: {},
 };

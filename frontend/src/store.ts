@@ -1,10 +1,10 @@
 import { configureStore } from "@reduxjs/toolkit";
-import jumpToReducer from "./reducers/jumpToReducer";
+import playerStateReducer from "./reducers/playerStateReducer";
 import setDataReducer from "./reducers/setDataReducer"
 
 export const store = configureStore({
   reducer: {
-    jumpTo: jumpToReducer,
+    playerState: playerStateReducer,
     setData: setDataReducer,
   },
 });
