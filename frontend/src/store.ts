@@ -1,11 +1,13 @@
 import { configureStore } from "@reduxjs/toolkit";
 import playerStateReducer from "./reducers/playerStateReducer";
 import setDataReducer from "./reducers/setDataReducer"
+import playerTimeReducer from "./reducers/playerTimeReducer";
 
 export const store = configureStore({
   reducer: {
     playerState: playerStateReducer,
     setData: setDataReducer,
+    playerTime: playerTimeReducer
   },
 });
 

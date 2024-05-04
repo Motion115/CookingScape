@@ -4,6 +4,7 @@ import ReactPlayer from "react-player";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../store";
 import { VideoState } from "../types/InfoTypes";
+import { recordPlayerProgression } from "../reducers/playerTimeReducer";
 
 const VideoPlayer: React.FC = () => {
   const [timerId, setTimerId] = React.useState<NodeJS.Timeout | null>(null);
@@ -16,6 +17,13 @@ const VideoPlayer: React.FC = () => {
 
   const setPlayerRef = (player: ReactPlayer) => {
     playerRef.current = player;
+  };
+
+  const setCurrentTime = () => {
+    const currentTime = playerRef.current?.getCurrentTime();
+    if (currentTime) {
+      dispatch(recordPlayerProgression(currentTime));
+    }
   };
 
   const jumpTo = (currentClipStatus: VideoState) => {
@@ -57,6 +65,8 @@ const VideoPlayer: React.FC = () => {
         ref={setPlayerRef}
         width={"100%"}
         height={"100%"}
+        onPause={setCurrentTime}
+        onSeek={setCurrentTime}
       />
     </div>
   );

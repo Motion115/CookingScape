@@ -30,6 +30,11 @@ export interface SceneListItem {
 export interface VideoState {
   startTime: number;
   duration: number;
+  timeStamp?: number;
+}
+
+export interface VideoTime {
+  time: number
 }
 
 export interface ingredientsItem {

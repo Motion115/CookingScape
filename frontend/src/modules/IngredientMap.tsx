@@ -9,7 +9,7 @@ import {
   Tag,
   Select,
 } from "antd";
-import { RedoOutlined } from "@ant-design/icons";
+import { RedoOutlined, CloseOutlined } from "@ant-design/icons";
 import { useSelector } from "react-redux";
 import { RootState } from "../store";
 import lodash, { drop } from "lodash";
@@ -106,9 +106,12 @@ export default function IngredientMap() {
   return (
     <div ref={componentRef}>
       <Space direction="vertical">
-        <Button onClick={handleResize} shape="circle">
-          <RedoOutlined />
-        </Button>
+        <div>
+          Refresh width:{" "}
+          <Button onClick={handleResize} shape="circle">
+            <RedoOutlined />
+          </Button>
+        </div>
         <div style={{ width: "100%" }}>
           <Flex justify="space-between" wrap="wrap" gap="small">
             {/* <Select

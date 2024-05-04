@@ -28,31 +28,34 @@ const App: React.FC = () => {
     <div className="app">
       <ConfigProvider theme={THEME}>
         <Header>
-          <Text style={{ fontSize: "20px", padding: "2%", fontWeight: "bold" }}>
+          <Text style={{ fontSize: "20px", padding: "1%", fontWeight: "bold" }}>
             CookingNavigator
           </Text>
         </Header>
-        <Content style={{ padding: "2%", margin: "0 auto" }}>
+        <Content style={{ padding: "1%", margin: "0 auto" }}>
           <Layout dir="vertical">
             <Row gutter={[16, 24]}>
               <Col span={12}>
                 <VideoPlayer />
               </Col>
               <Col span={12}>
-                <MilestoneSteps />
-              </Col>
-            </Row>
-            <Row gutter={[16, 24]}>
-              <Col span={12}>
-                <RecipeSteps />
-              </Col>
-              <Col span={12}>
                 <IngredientMap />
               </Col>
             </Row>
+            <Row gutter={[16, 24]}>
+              <Col span={24}>
+                <div style={{ width: "100%", height: "400px" }}>
+                  <MilestoneSteps />
+                </div>
+              </Col>
+              {/* <Col span={12}>
+                <RecipeSteps />
+              </Col>
+              <Col span={12}></Col> */}
+            </Row>
           </Layout>
         </Content>
-        <Footer style={{ height: "80px", padding: "2%", margin: "0 auto" }}>
+        <Footer style={{ height: "80px", padding: "1%", margin: "0 auto" }}>
           © This project is in developmenet stage. All rights reserved.
         </Footer>
       </ConfigProvider>
