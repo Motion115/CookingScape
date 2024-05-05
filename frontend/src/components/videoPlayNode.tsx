@@ -1,6 +1,6 @@
 import { Button, Flex, InputNumber, Radio, Space, Typography } from "antd";
 import React, { memo, useState } from "react";
-import { EnterOutlined, SwapOutlined, DragOutlined } from "@ant-design/icons";
+import { EnterOutlined, SwapOutlined, DragOutlined, FieldTimeOutlined } from "@ant-design/icons";
 import { Handle, NodeToolbar, Position } from "reactflow";
 import { AppDispatch, RootState } from "../store";
 import { setVideoClip } from "../reducers/playerStateReducer";
@@ -16,7 +16,7 @@ interface CustomColorPickerNodeProps {
 const milestoneBgColor: { [key: string]: string } = {
   Preparation: "#BDD2FD40",
   Cooking: "#FFD8B840",
-  Presentation: "#BDEFDB40",
+  Assembly: "#BDEFDB40",
 };
 
 export default memo((props: CustomColorPickerNodeProps) => {
@@ -27,6 +27,10 @@ export default memo((props: CustomColorPickerNodeProps) => {
   );
   const [duration, setDuration] = useState<number>(
     data.time.duration as number
+  );
+
+  const [description, setDescription] = useState<string>(
+    data.data.description
   );
 
   const [stage, setStage] = useState<string>(data.stage as string);
@@ -56,14 +60,15 @@ export default memo((props: CustomColorPickerNodeProps) => {
               value: "Cooking",
             },
             {
-              label: "Presentation",
-              value: "Presentation",
+              label: "Assembly",
+              value: "Assembly",
             },
           ]}
           onChange={(e) => {
             setStage(e.target.value as string);
           }}
           value={stage}
+          defaultValue={stage}
           optionType="button"
           buttonStyle="solid"
         />
@@ -86,7 +91,7 @@ export default memo((props: CustomColorPickerNodeProps) => {
         <Space direction="vertical" size="small">
           <div>
             <Text strong={true}>Step: </Text>
-            <Text>{data.data.description}</Text>
+            <Text editable={{onChange: setDescription}} >{description}</Text>
           </div>
           <div style={{ padding: "1%" }}>
             <Space direction="horizontal">
@@ -97,7 +102,7 @@ export default memo((props: CustomColorPickerNodeProps) => {
               />
               <Button
                 shape="circle"
-                icon={<EnterOutlined />}
+                icon={<FieldTimeOutlined />}
                 onClick={() => {
                   setStartTime(Math.floor(currentTime.time));
                 }}
@@ -110,7 +115,7 @@ export default memo((props: CustomColorPickerNodeProps) => {
               />
               <Button
                 shape="circle"
-                icon={<EnterOutlined />}
+                icon={<FieldTimeOutlined />}
                 onClick={() => {
                   setDuration(Math.floor(currentTime.time) - startTime >= 0 ? Math.floor(currentTime.time) - startTime : duration);
                 }}
