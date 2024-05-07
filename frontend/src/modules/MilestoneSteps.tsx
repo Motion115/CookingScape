@@ -10,6 +10,9 @@ import ReactFlow, {
   updateEdge,
   Edge,
   Connection,
+  Panel,
+  useReactFlow,
+  ReactFlowInstance,
 } from "reactflow";
 import "reactflow/dist/style.css";
 
@@ -17,7 +20,9 @@ import videoPlayNode from "../components/videoPlayNode";
 import { useSelector } from "react-redux";
 import { RootState } from "../store";
 import lodash from "lodash";
+import { PlusOutlined, SaveOutlined } from "@ant-design/icons";
 import { IndividualStep, RecipeStepDescription } from "../types/InfoTypes";
+import { Button, Dropdown, MenuProps, Space } from "antd";
 
 const nodeTypes = {
   selectorNode: videoPlayNode,
@@ -29,6 +34,7 @@ const MilestoneInterface = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const edgeUpdateSuccessful = useRef(true);
+  const [rfInstance, setRfInstance] = useState<ReactFlowInstance>();
 
   const configData = useSelector((state: RootState) => state.setData);
   const cookingPrep = configData.steps.preparation;
@@ -64,6 +70,8 @@ const MilestoneInterface = () => {
             data: val.data,
             time: val.videoTime,
             stage: cookingStageName,
+            node_id: val.id,
+            deleteFunc: onDelete,
           },
           position: { x: 25 + id * 450, y: baseYpos },
           isConnectable: true,
@@ -83,16 +91,34 @@ const MilestoneInterface = () => {
         },
       }));
 
-      return { newNodes, newEdges }
-
-      
+      return { newNodes, newEdges };
     };
 
     let prepConfig = initNodeInterface(cookingPrep, "Preparation", 10);
     let cookConfig = initNodeInterface(cookingCook, "Cooking", 300);
     let assembleConfig = initNodeInterface(cookingAssemble, "Assembly", 600);
-    setEdges([...edges, ...prepConfig.newEdges, ...cookConfig.newEdges, ...assembleConfig.newEdges]);
-    setNodes([...nodes, ...prepConfig.newNodes, ...cookConfig.newNodes, ...assembleConfig.newNodes]);
+
+    setNodes([
+      ...nodes,
+      ...prepConfig.newNodes,
+      ...cookConfig.newNodes,
+      ...assembleConfig.newNodes,
+    ]);
+    setEdges((prevEdges) => {
+      const uniqueEdges = [
+        ...prevEdges,
+        ...prepConfig.newEdges.filter(
+          (newEdge) => !prevEdges.some((edge) => edge.id === newEdge.id)
+        ),
+        ...cookConfig.newEdges.filter(
+          (newEdge) => !prevEdges.some((edge) => edge.id === newEdge.id)
+        ),
+        ...assembleConfig.newEdges.filter(
+          (newEdge) => !prevEdges.some((edge) => edge.id === newEdge.id)
+        ),
+      ];
+      return uniqueEdges;
+    });
   }, [cookingPrep, cookingAssemble, cookingCook]);
 
   const onConnect = useCallback(
@@ -130,6 +156,61 @@ const MilestoneInterface = () => {
     edgeUpdateSuccessful.current = false;
   }, []);
 
+  const onDelete = useCallback(
+    (id: string) => {
+      setNodes((nodes) => nodes.filter((node) => node.id !== id));
+      setEdges((edges) => edges.filter((edge) => edge.source !== id));
+    },
+    [setNodes, setEdges]
+  );
+
+  const onAdd = useCallback(
+    (e: any) => {
+      // get current timestamp
+      const timestamp = Date.now();
+      const newNode = {
+        id: "userNode_" + timestamp.toString(),
+        type: "selectorNode",
+        data: {
+          data: {
+            clip_id: [],
+            description: "",
+          },
+          time: {
+            startTime: 0,
+            duration: 0,
+          },
+          stage: e.key,
+          node_id: "userNode_" + timestamp.toString(),
+          deleteFunc: onDelete,
+        },
+        position: { x: 50, y: 150 },
+        isConnectable: true,
+        // parentNode: "group_prep",
+        // extent: "parent",
+        dragHandle: ".custom-drag-handle",
+      };
+      setNodes((nds) => nds.concat(newNode));
+    },
+    [setNodes]
+  );
+
+  const onSave = useCallback(() => {
+    if (rfInstance) {
+      const flow = rfInstance.toObject();
+      let stringFlow = JSON.stringify(flow);
+      const blob = new Blob([stringFlow], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "data.json";
+      link.click();
+
+      URL.revokeObjectURL(url);
+    }
+  }, [rfInstance]);
+
   return (
     <ReactFlow
       nodes={nodes}
@@ -140,6 +221,7 @@ const MilestoneInterface = () => {
       onEdgeUpdate={onEdgeUpdate}
       onEdgeUpdateStart={onEdgeUpdateStart}
       onEdgeUpdateEnd={onEdgeUpdateEnd}
+      onInit={setRfInstance}
       nodeTypes={nodeTypes}
       // connectionLineStyle={connectionLineStyle}
       // snapToGrid={true}
@@ -149,6 +231,34 @@ const MilestoneInterface = () => {
       attributionPosition="bottom-left"
     >
       <Controls />
+      <Panel position="top-right">
+        <Space direction="horizontal">
+          <Dropdown
+            menu={{
+              items: [
+                {
+                  key: "Preparation",
+                  label: "Preparation",
+                },
+                {
+                  key: "Cooking",
+                  label: "Cooking",
+                },
+                {
+                  key: "Assembly",
+                  label: "Assembly",
+                },
+              ] as MenuProps["items"],
+              onClick: onAdd,
+            }}
+          >
+            <Button shape="circle" icon={<PlusOutlined />} onClick={onAdd} />
+          </Dropdown>
+          <Button shape="circle" onClick={onSave}>
+            <SaveOutlined />
+          </Button>
+        </Space>
+      </Panel>
     </ReactFlow>
   );
 };

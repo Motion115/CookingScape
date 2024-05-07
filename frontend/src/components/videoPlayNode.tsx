@@ -1,7 +1,7 @@
 import { Button, Flex, InputNumber, Radio, Space, Typography } from "antd";
 import React, { memo, useState } from "react";
-import { EnterOutlined, SwapOutlined, DragOutlined, FieldTimeOutlined } from "@ant-design/icons";
-import { Handle, NodeToolbar, Position } from "reactflow";
+import { DeleteOutlined, SwapOutlined, DragOutlined, FieldTimeOutlined } from "@ant-design/icons";
+import { Handle, NodeToolbar, Position, useReactFlow } from "reactflow";
 import { AppDispatch, RootState } from "../store";
 import { setVideoClip } from "../reducers/playerStateReducer";
 import { useDispatch, useSelector } from "react-redux";
@@ -46,31 +46,46 @@ export default memo((props: CustomColorPickerNodeProps) => {
     );
   };
 
+  const onDeleteNode = () => {
+    data.deleteFunc(data.node_id);
+  }
+
   return (
     <>
       <NodeToolbar position={Position.Top}>
-        <Radio.Group
-          options={[
-            {
-              label: "Preparation",
-              value: "Preparation",
-            },
-            {
-              label: "Cooking",
-              value: "Cooking",
-            },
-            {
-              label: "Assembly",
-              value: "Assembly",
-            },
-          ]}
-          onChange={(e) => {
-            setStage(e.target.value as string);
-          }}
-          value={stage}
-          defaultValue={stage}
-          optionType="button"
-          buttonStyle="solid"
+        <Space direction="horizontal">
+          <Radio.Group
+            options={[
+              {
+                label: "Preparation",
+                value: "Preparation",
+              },
+              {
+                label: "Cooking",
+                value: "Cooking",
+              },
+              {
+                label: "Assembly",
+                value: "Assembly",
+              },
+            ]}
+            onChange={(e) => {
+              setStage(e.target.value as string);
+            }}
+            value={stage}
+            defaultValue={stage}
+            optionType="button"
+            buttonStyle="solid"
+          />
+        </Space>
+      </NodeToolbar>
+      <NodeToolbar position={Position.Bottom}>
+        <Button
+          shape="circle"
+          danger
+          size="large"
+          icon={<DeleteOutlined />}
+          onClick={onDeleteNode}
         />
       </NodeToolbar>
       <Handle
@@ -79,6 +94,7 @@ export default memo((props: CustomColorPickerNodeProps) => {
         style={{ background: "#555" }}
         onConnect={(params) => console.log("handle onConnect", params)}
         isConnectable={isConnectable}
+        id="tar"
       />
       <div
         style={{
@@ -91,7 +107,10 @@ export default memo((props: CustomColorPickerNodeProps) => {
         <Space direction="vertical" size="small">
           <div>
             <Text strong={true}>Step: </Text>
-            <Text editable={{onChange: setDescription}} >{description}</Text>
+            <Text editable={{ onChange: (value: string) => {
+              setDescription(value)
+              // need to sync with the data store (maybe use redux here)
+             } }}>{description}</Text>
           </div>
           <div style={{ padding: "1%" }}>
             <Space direction="horizontal">
@@ -117,7 +136,11 @@ export default memo((props: CustomColorPickerNodeProps) => {
                 shape="circle"
                 icon={<FieldTimeOutlined />}
                 onClick={() => {
-                  setDuration(Math.floor(currentTime.time) - startTime >= 0 ? Math.floor(currentTime.time) - startTime : duration);
+                  setDuration(
+                    Math.floor(currentTime.time) - startTime >= 0
+                      ? Math.floor(currentTime.time) - startTime
+                      : duration
+                  );
                 }}
               />
             </Space>
@@ -138,6 +161,7 @@ export default memo((props: CustomColorPickerNodeProps) => {
         type="source"
         position={Position.Right}
         isConnectable={isConnectable}
+        id="src"
       />
     </>
   );
