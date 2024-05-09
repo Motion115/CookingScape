@@ -1,15 +1,21 @@
 import { Button, Flex, InputNumber, Radio, Space, Typography } from "antd";
-import React, { memo, useState } from "react";
-import { DeleteOutlined, SwapOutlined, DragOutlined, FieldTimeOutlined } from "@ant-design/icons";
+import React, { memo, useEffect, useState } from "react";
+import {
+  DeleteOutlined,
+  SwapOutlined,
+  DragOutlined,
+  FieldTimeOutlined,
+} from "@ant-design/icons";
 import { Handle, NodeToolbar, Position, useReactFlow } from "reactflow";
 import { AppDispatch, RootState } from "../store";
 import { setVideoClip } from "../reducers/playerStateReducer";
 import { useDispatch, useSelector } from "react-redux";
+import { NodeDataParams } from "../types/InfoTypes";
 
 const { Text } = Typography;
 
 interface CustomColorPickerNodeProps {
-  data: any;
+  data: NodeDataParams;
   isConnectable: boolean;
 }
 
@@ -21,34 +27,71 @@ const milestoneBgColor: { [key: string]: string } = {
 
 export default memo((props: CustomColorPickerNodeProps) => {
   const { data, isConnectable } = props;
+  const reactFlow = useReactFlow();
 
-  const [startTime, setStartTime] = useState<number>(
-    Math.floor(data.time.startTime) as number
-  );
-  const [duration, setDuration] = useState<number>(
-    data.time.duration as number
-  );
+  const [nodeState, setNodeState] = useState<NodeDataParams>(data);
 
-  const [description, setDescription] = useState<string>(
-    data.data.description
-  );
+  useEffect(() => {
+    const nodesListNew = reactFlow.getNodes().map((node) => {
+      if (node.id === nodeState.node_id) {
+        // reset the data segment
+        return { ...node, data: nodeState };
+      }
+      return node;
+    });
 
-  const [stage, setStage] = useState<string>(data.stage as string);
+    reactFlow.setNodes(nodesListNew);
+  }, [nodeState]);
+
+  const setStartTime = (time: number) => {
+    setNodeState({
+      ...nodeState,
+      time: {
+        ...nodeState.time,
+        startTime: time,
+      },
+    });
+  };
+
+  const setDuration = (time: number) => {
+    setNodeState({
+      ...nodeState,
+      time: {
+        ...nodeState.time,
+        duration: time,
+      },
+    });
+  };
+
+  const setDescription = (desc: string) => {
+    setNodeState({
+      ...nodeState,
+      description: desc,
+    });
+  };
+
+  const setStage = (stage: string) => {
+    setNodeState({
+      ...nodeState,
+      stage: stage,
+    });
+  };
+
   const currentTime = useSelector((state: RootState) => state.playerTime);
   const dispatch = useDispatch<AppDispatch>();
 
   const transfer = () => {
     dispatch(
       setVideoClip({
-        startTime: startTime,
-        duration: duration,
+        startTime: nodeState.time.startTime,
+        duration: nodeState.time.duration,
       })
     );
   };
 
   const onDeleteNode = () => {
-    data.deleteFunc(data.node_id);
-  }
+    data.deleteNode(data.node_id);
+  };
 
   return (
     <>
@@ -72,8 +115,8 @@ export default memo((props: CustomColorPickerNodeProps) => {
             onChange={(e) => {
               setStage(e.target.value as string);
             }}
-            value={stage}
-            defaultValue={stage}
+            value={nodeState.stage}
+            defaultValue={nodeState.stage}
             optionType="button"
             buttonStyle="solid"
           />
@@ -98,7 +141,7 @@ export default memo((props: CustomColorPickerNodeProps) => {
       />
       <div
         style={{
-          backgroundColor: milestoneBgColor[stage],
+          backgroundColor: milestoneBgColor[nodeState.stage],
           border: "1px solid #555",
           width: "400px",
           borderRadius: "12px",
@@ -107,16 +150,22 @@ export default memo((props: CustomColorPickerNodeProps) => {
         <Space direction="vertical" size="small">
           <div>
             <Text strong={true}>Step: </Text>
-            <Text editable={{ onChange: (value: string) => {
-              setDescription(value)
-              // need to sync with the data store (maybe use redux here)
-             } }}>{description}</Text>
+            <Text
+              editable={{
+                onChange: (value: string) => {
+                  setDescription(value);
+                  // need to sync with the data store (maybe use redux here)
+                },
+              }}
+            >
+              {nodeState.description}
+            </Text>
           </div>
           <div style={{ padding: "1%" }}>
             <Space direction="horizontal">
               <Text strong={true}>Start Time: </Text>
               <InputNumber
-                value={startTime}
+                value={nodeState.time.startTime}
                 onChange={(value) => setStartTime(value as number)}
               />
               <Button
@@ -129,7 +178,7 @@ export default memo((props: CustomColorPickerNodeProps) => {
 
               <Text strong={true}>Duration: </Text>
               <InputNumber
-                value={duration}
+                value={nodeState.time.duration}
                 onChange={(value) => setDuration(value as number)}
               />
               <Button
@@ -137,9 +186,9 @@ export default memo((props: CustomColorPickerNodeProps) => {
                 icon={<FieldTimeOutlined />}
                 onClick={() => {
                   setDuration(
-                    Math.floor(currentTime.time) - startTime >= 0
-                      ? Math.floor(currentTime.time) - startTime
-                      : duration
+                    Math.floor(currentTime.time) - nodeState.time.startTime >= 0
+                      ? Math.floor(currentTime.time) - nodeState.time.startTime
+                      : nodeState.time.duration
                   );
                 }}
               />

@@ -40,3 +40,12 @@ export interface VideoTime {
 export interface ingredientsItem {
   [key: string]: number[]
 }
+
+export interface NodeDataParams {
+  description: string,
+  time: VideoState,
+  stage: string,
+  node_id: string,
+  deleteNode: any,
+  updateNode: any
+}

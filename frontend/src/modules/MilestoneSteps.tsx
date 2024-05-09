@@ -21,7 +21,12 @@ import { useSelector } from "react-redux";
 import { RootState } from "../store";
 import lodash from "lodash";
 import { PlusOutlined, SaveOutlined } from "@ant-design/icons";
-import { IndividualStep, RecipeStepDescription } from "../types/InfoTypes";
+import {
+  IndividualStep,
+  NodeDataParams,
+  RecipeStepDescription,
+  VideoState,
+} from "../types/InfoTypes";
 import { Button, Dropdown, MenuProps, Space } from "antd";
 
 const nodeTypes = {
@@ -67,12 +72,13 @@ const MilestoneInterface = () => {
           id: val.id,
           type: "selectorNode",
           data: {
-            data: val.data,
+            description: val.data.description,
             time: val.videoTime,
             stage: cookingStageName,
             node_id: val.id,
-            deleteFunc: onDelete,
-          },
+            deleteNode: onDelete,
+            updateNode: setNodes,
+          } as NodeDataParams,
           position: { x: 25 + id * 450, y: baseYpos },
           isConnectable: true,
           // parentNode: "group_prep",
@@ -166,25 +172,38 @@ const MilestoneInterface = () => {
 
   const onAdd = useCallback(
     (e: any) => {
+      const definedStage: string = e.key as string;
+      const posConfig: { [key: string]: {x: number, y: number}} = {
+        Preparation: {
+          x: 150,
+          y: 150,
+        },
+        Cooking: {
+          x: 150,
+          y: 450,
+        },
+        Assembly: {
+          x: 150,
+          y: 750,
+        },
+      };
       // get current timestamp
       const timestamp = Date.now();
       const newNode = {
         id: "userNode_" + timestamp.toString(),
         type: "selectorNode",
         data: {
-          data: {
-            clip_id: [],
-            description: "",
-          },
+          description: "",
           time: {
             startTime: 0,
             duration: 0,
-          },
-          stage: e.key,
+          } as VideoState,
+          stage: definedStage,
           node_id: "userNode_" + timestamp.toString(),
-          deleteFunc: onDelete,
-        },
-        position: { x: 50, y: 150 },
+          deleteNode: onDelete,
+          updateNode: setNodes,
+        } as NodeDataParams,
+        position: posConfig[definedStage],
         isConnectable: true,
         // parentNode: "group_prep",
         // extent: "parent",
@@ -252,7 +271,7 @@ const MilestoneInterface = () => {
               onClick: onAdd,
             }}
           >
-            <Button shape="circle" icon={<PlusOutlined />} onClick={onAdd} />
+            <Button shape="circle" icon={<PlusOutlined />} />
           </Dropdown>
           <Button shape="circle" onClick={onSave}>
             <SaveOutlined />
