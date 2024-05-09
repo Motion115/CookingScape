@@ -49,3 +49,7 @@ export interface NodeDataParams {
   deleteNode: any,
   updateNode: any
 }
+
+export interface APIPostData {
+  description: string,
+}

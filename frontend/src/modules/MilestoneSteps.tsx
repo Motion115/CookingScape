@@ -13,6 +13,7 @@ import ReactFlow, {
   Panel,
   useReactFlow,
   ReactFlowInstance,
+  Background,
 } from "reactflow";
 import "reactflow/dist/style.css";
 
@@ -20,7 +21,7 @@ import videoPlayNode from "../components/videoPlayNode";
 import { useSelector } from "react-redux";
 import { RootState } from "../store";
 import lodash from "lodash";
-import { PlusOutlined, SaveOutlined } from "@ant-design/icons";
+import { PlusOutlined, SaveOutlined, UploadOutlined } from "@ant-design/icons";
 import {
   IndividualStep,
   NodeDataParams,
@@ -28,12 +29,14 @@ import {
   VideoState,
 } from "../types/InfoTypes";
 import { Button, Dropdown, MenuProps, Space } from "antd";
+import { milestoneBgColor } from "../looks/coloring";
+import FileUploader from "../components/fileUploader";
 
 const nodeTypes = {
   selectorNode: videoPlayNode,
 };
 
-const defaultViewport = { x: 0, y: 0, zoom: 1.5 };
+const defaultViewport = { x: 0, y: 0, zoom: 0.8 };
 
 const MilestoneInterface = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -173,7 +176,7 @@ const MilestoneInterface = () => {
   const onAdd = useCallback(
     (e: any) => {
       const definedStage: string = e.key as string;
-      const posConfig: { [key: string]: {x: number, y: number}} = {
+      const posConfig: { [key: string]: { x: number; y: number } } = {
         Preparation: {
           x: 150,
           y: 150,
@@ -230,6 +233,15 @@ const MilestoneInterface = () => {
     }
   }, [rfInstance]);
 
+  const handleFileUpload = (file: File) => {
+    const config = file as unknown as {
+      nodes: [];
+      edges: [];
+    }
+    setNodes(config.nodes);
+    setEdges(config.edges)
+  };
+
   return (
     <ReactFlow
       nodes={nodes}
@@ -243,10 +255,10 @@ const MilestoneInterface = () => {
       onInit={setRfInstance}
       nodeTypes={nodeTypes}
       // connectionLineStyle={connectionLineStyle}
-      // snapToGrid={true}
-      // snapGrid={[20, 20]}
+      snapToGrid={true}
+      snapGrid={[10, 10]}
       defaultViewport={defaultViewport}
-      fitView
+      // fitView
       attributionPosition="bottom-left"
     >
       <Controls />
@@ -273,11 +285,19 @@ const MilestoneInterface = () => {
           >
             <Button shape="circle" icon={<PlusOutlined />} />
           </Dropdown>
+          <FileUploader onFileUpload={handleFileUpload} />
           <Button shape="circle" onClick={onSave}>
             <SaveOutlined />
           </Button>
         </Space>
       </Panel>
+      <Background />
+      <MiniMap
+        zoomable
+        pannable
+        nodeColor={(n) => milestoneBgColor[n.data.stage]}
+        position="bottom-right"
+      />
     </ReactFlow>
   );
 };

@@ -1,8 +1,19 @@
-import { Button, Flex, InputNumber, Radio, Space, Typography } from "antd";
+import {
+  Button,
+  Divider,
+  Flex,
+  InputNumber,
+  Radio,
+  Space,
+  Tooltip,
+  Typography,
+} from "antd";
 import React, { memo, useEffect, useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faWandMagicSparkles } from "@fortawesome/free-solid-svg-icons";
 import {
   DeleteOutlined,
-  SwapOutlined,
+  CaretRightOutlined,
   DragOutlined,
   FieldTimeOutlined,
 } from "@ant-design/icons";
@@ -10,7 +21,14 @@ import { Handle, NodeToolbar, Position, useReactFlow } from "reactflow";
 import { AppDispatch, RootState } from "../store";
 import { setVideoClip } from "../reducers/playerStateReducer";
 import { useDispatch, useSelector } from "react-redux";
-import { NodeDataParams } from "../types/InfoTypes";
+import {
+  APIPostData,
+  NodeDataParams,
+  RecipeStepDescription,
+} from "../types/InfoTypes";
+import { milestoneBgColor, milestoneFgColor } from "../looks/coloring";
+import { SERVER_URL } from "../consts/server";
+import axios from "axios";
 
 const { Text } = Typography;
 
@@ -19,15 +37,12 @@ interface CustomColorPickerNodeProps {
   isConnectable: boolean;
 }
 
-const milestoneBgColor: { [key: string]: string } = {
-  Preparation: "#BDD2FD40",
-  Cooking: "#FFD8B840",
-  Assembly: "#BDEFDB40",
-};
-
 export default memo((props: CustomColorPickerNodeProps) => {
   const { data, isConnectable } = props;
   const reactFlow = useReactFlow();
+
+  const configData = useSelector((state: RootState) => state.setData);
+  const sceneList = configData.sceneList;
 
   const [nodeState, setNodeState] = useState<NodeDataParams>(data);
 
@@ -93,6 +108,32 @@ export default memo((props: CustomColorPickerNodeProps) => {
     data.deleteNode(data.node_id);
   };
 
+  const [vlmLoading, setVlmLoading] = useState(false);
+  const callVideoLanguageGrounding = async () => {
+    setVlmLoading(true);
+    const description = nodeState.description;
+    // call the language grounding API
+    try {
+      const response = await axios.post<APIPostData>(
+        SERVER_URL + "/textToClip",
+        {
+          description: description,
+        }
+      );
+      const responseData = response.data as RecipeStepDescription; // Parsed JSON response
+
+      // console.log(sceneList[responseData.clip_id[0].toString()]);
+      setNodeState({
+        ...nodeState,
+        time: sceneList[responseData.clip_id[0].toString()],
+      });
+      setVlmLoading(false);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+    // set state to update the time
+  };
+
   return (
     <>
       <NodeToolbar position={Position.Top}>
@@ -147,10 +188,19 @@ export default memo((props: CustomColorPickerNodeProps) => {
           borderRadius: "12px",
         }}
       >
-        <Space direction="vertical" size="small">
-          <div>
-            <Text strong={true}>Step: </Text>
+        <div
+          style={{
+            width: "90%",
+            margin: "auto",
+            padding: "1%",
+            textAlign: "justify",
+            backgroundColor: milestoneFgColor[nodeState.stage],
+            borderRadius: "12px",
+          }}
+        >
+          <Flex justify="space-between" align="center">
             <Text
+              strong
               editable={{
                 onChange: (value: string) => {
                   setDescription(value);
@@ -160,51 +210,95 @@ export default memo((props: CustomColorPickerNodeProps) => {
             >
               {nodeState.description}
             </Text>
-          </div>
-          <div style={{ padding: "1%" }}>
-            <Space direction="horizontal">
-              <Text strong={true}>Start Time: </Text>
-              <InputNumber
-                value={nodeState.time.startTime}
-                onChange={(value) => setStartTime(value as number)}
-              />
+            <Divider type="vertical" />
+            <Tooltip title="Transfer to this step" color="blue">
               <Button
                 shape="circle"
-                icon={<FieldTimeOutlined />}
-                onClick={() => {
-                  setStartTime(Math.floor(currentTime.time));
-                }}
-              />
-
-              <Text strong={true}>Duration: </Text>
-              <InputNumber
-                value={nodeState.time.duration}
-                onChange={(value) => setDuration(value as number)}
-              />
-              <Button
-                shape="circle"
-                icon={<FieldTimeOutlined />}
-                onClick={() => {
-                  setDuration(
-                    Math.floor(currentTime.time) - nodeState.time.startTime >= 0
-                      ? Math.floor(currentTime.time) - nodeState.time.startTime
-                      : nodeState.time.duration
-                  );
-                }}
-              />
-            </Space>
-            <Flex justify="space-between" align="center">
-              <Button
-                shape="circle"
-                icon={<SwapOutlined />}
+                icon={<CaretRightOutlined />}
                 onClick={transfer}
               />
-              <div className="custom-drag-handle">
-                <Button shape="circle" icon={<DragOutlined />} />
+            </Tooltip>
+          </Flex>
+        </div>
+        <Divider
+          style={{ margin: "auto", width: "90%", padding: "0%" }}
+          dashed
+        />
+
+        <div
+          style={{
+            width: "90%",
+            margin: "auto",
+            padding: "1%",
+            textAlign: "justify",
+          }}
+        >
+          <Flex justify="space-between" align="center">
+            <Space direction="vertical">
+              <div>
+                <Space direction="horizontal">
+                  <Text>From: </Text>
+                  <InputNumber
+                    value={nodeState.time.startTime}
+                    onChange={(value) => setStartTime(value as number)}
+                  />
+                  <Text> seconds</Text>
+                  <Tooltip title="Record current play time" color="blue">
+                    <Button
+                      shape="circle"
+                      icon={<FieldTimeOutlined />}
+                      onClick={() => {
+                        setStartTime(Math.floor(currentTime.time));
+                      }}
+                    />
+                  </Tooltip>
+                </Space>
               </div>
-            </Flex>
-          </div>
-        </Space>
+
+              <div>
+                <Space direction="horizontal">
+                  <Text>For: </Text>
+                  <InputNumber
+                    value={nodeState.time.duration}
+                    onChange={(value) => setDuration(value as number)}
+                  />
+                  <Text> seconds</Text>
+                  <Tooltip title="Record current play time" color="blue">
+                    <Button
+                      shape="circle"
+                      icon={<FieldTimeOutlined />}
+                      onClick={() => {
+                        setDuration(
+                          Math.floor(currentTime.time) -
+                            nodeState.time.startTime >=
+                            0
+                            ? Math.floor(currentTime.time) -
+                                nodeState.time.startTime
+                            : nodeState.time.duration
+                        );
+                      }}
+                    />
+                  </Tooltip>
+                </Space>
+              </div>
+            </Space>
+            <Space direction="horizontal">
+              <Tooltip title="Auto refocus video segment" color="blue">
+                <Button
+                  shape="circle"
+                  icon={<FontAwesomeIcon icon={faWandMagicSparkles} />}
+                  onClick={callVideoLanguageGrounding}
+                  loading={vlmLoading}
+                />
+              </Tooltip>
+              <div className="custom-drag-handle">
+                <Tooltip title="Drag to move, click to configure" color="blue">
+                  <Button shape="circle" icon={<DragOutlined />} />
+                </Tooltip>
+              </div>
+            </Space>
+          </Flex>
+        </div>
       </div>
       <Handle
         type="source"

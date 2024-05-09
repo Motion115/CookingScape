@@ -58,12 +58,12 @@ const VideoPlayer: React.FC = () => {
   return (
     <div>
       <ReactPlayer
-        style={{ maxWidth: "100%", maxHeight: "100%" }}
+        style={{ maxWidth: "100%", maxHeight: "100%", margin: "auto"}}
         url="./Steak-GR.mp4"
         controls={true}
         playing={isPlay}
         ref={setPlayerRef}
-        width={"100%"}
+        width={"80%"}
         height={"100%"}
         onPause={setCurrentTime}
         onSeek={setCurrentTime}

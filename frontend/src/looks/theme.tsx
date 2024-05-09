@@ -1,12 +1,13 @@
-import { Layout } from "antd";
+import { Divider, Layout } from "antd";
 
 const THEME = {
   token: {
-    colorPrimary: "#00B96B",
-    // colorPrimary: "rgb(200, 200, 200)",
+    // colorPrimary: "#00B96B",
+    // colorPrimary: "blue",
     colorBgLayout: "#ffffff",
     borderRadius: 4,
     fontSize: 16,
+    colorSplit: "rgba(25, 25, 25, 0.4)",
     fontFamily:
       "Maven Pro, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue'",
   },
