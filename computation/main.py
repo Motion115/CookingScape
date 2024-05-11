@@ -1,3 +1,4 @@
+from tqdm import tqdm
 from utils.video import Video
 from utils.MIL_NCE import MIL_NCE
 from utils.LM_hook import GLM_langchain, Qwen1_8
@@ -26,6 +27,12 @@ def instructional_cooking_video_knowledge_extraction_computation_pipeline(
         print("- Cached video info exist, skipping ...")
         return
 
+    videoPreprocessingModel = Video(
+        file_path=video_file_path,
+        file_name=video_name,
+        encoding=video_encoding,
+        ASR_model_path=whisper_ASR_model_path)
+    
     # read the scene list
     scene_list = pd.read_csv(f"{video_info_directory}/scene_list.csv")
     # Convert the "Start Timecode" column to timedelta
@@ -38,16 +45,39 @@ def instructional_cooking_video_knowledge_extraction_computation_pipeline(
     # pivot to dictionary
     video_info_dict = selected_columns.set_index('id').to_dict(orient='index')
 
-    videoPreprocessingModel = Video(
-        file_path=video_file_path,
-        file_name=video_name,
-        encoding=video_encoding,
-        ASR_model_path=whisper_ASR_model_path)
-
     transcript = videoPreprocessingModel.get_transcript()[0]
 
-    print("- Extracting Cooking Steps")
+
     languageModel_GLM = GLM_langchain(token=getToken(glm_token_file))
+
+    print("- Evaluating difficulty")
+    # 5-shot decision-making
+    # ratingList = []
+    # for i in tqdm(range(5)):
+    #     rating = languageModel_GLM.getRating(transcript)
+    #     ratingList.append(rating)
+    # for rate in ratingList:
+    #     print(rate["rating"])
+    # # count the ratings
+    # ratingCount = {}
+    # for rate in ratingList:
+    #     if rate["rating"] in ratingCount:
+    #         ratingCount[rate["rating"]] += 1
+    #     else:
+    #         ratingCount[rate["rating"]] = 1
+    # # get the most common rating
+    # finalVerdict = max(ratingCount, key=ratingCount.get)
+    # for rate in ratingList:
+    #     if rate["rating"] == finalVerdict:
+    #         finalRateData = rate
+    #         break
+
+    # with open("./rate.json", "w") as f:
+    #     json.dump(finalRateData, f)
+
+    finalRateData = json.load(open("./rate.json", "r"))
+
+    print("- Extracting Cooking Steps")
     # milestonedCookingSteps = languageModel_GLM.getCookingSteps(transcript)
     # sequentialCookingSteps = languageModel_GLM.getSequentialCookingSteps(transcript)
 
@@ -86,15 +116,13 @@ def instructional_cooking_video_knowledge_extraction_computation_pipeline(
     tagged_ingredients = visionLanguageModel.ingredients_vidtag(
         ingredientsList)
 
-    # TODO: sanity check the ingredients to its raw form (use LM to perform this task)
-    # - Does not work very well, need further consideration
-    # TODO: get the scene interval data into the video_info_dict
-
     # merge ingredients and cooking steps into one dict
     video_info_dict = {
         "steps": tagged_cooking_steps,
         "ingredients": tagged_ingredients,
-        "scene_list": video_info_dict
+        "scene_list": video_info_dict,
+        "difficulty": finalRateData,
+        "transcript": transcript,
     }
 
     # to json

@@ -63,7 +63,7 @@ class Video:
             print(f"- Key frames already exist for {self.file_name}.mp4")
     
     def detect_scenes(self):
-        if not os.path.exists('.cache/' + self.file_name + "/scene"):
+        if not os.path.exists('.cache/' + self.file_name + "/scene") or not os.path.exists('.cache/' + self.file_name + "/clip"):
             print(f"- Detecting scene")
             storage_path = os.path.join('.cache/' + self.file_name, "scene/")
             storage_clip_path = os.path.join('.cache/' + self.file_name, "clip/")
@@ -89,11 +89,14 @@ class Video:
         else:
             print(f"- Scene already exists for {self.file_name}.mp4")
 
-    def _find_scenes(self, video_path, storage_path, threshold=27.0):
+    def _find_scenes(self, video_path, storage_path, threshold=12):
         video = scenedetect.open_video(video_path)
         scene_manager = scenedetect.SceneManager()
+        # scene_manager.add_detector(
+        #     scenedetect.ContentDetector(threshold=threshold))
         scene_manager.add_detector(
-            scenedetect.ContentDetector(threshold=threshold))
+            scenedetect.AdaptiveDetector(adaptive_threshold=threshold, min_scene_len=30)
+        )
         # Detect all scenes in video from current position to end.
         scene_manager.detect_scenes(video, show_progress=True)
         # `get_scene_list` returns a list of start/end timecode pairs

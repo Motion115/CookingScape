@@ -31,6 +31,10 @@ class CookingSteps(BaseModel):
     cooking: str = Field(description="Content under cooking phase")
     assembly: str = Field(description="Content under assembly phase")
 
+class RatingData(BaseModel):
+    rating: int = Field(description="Difficulty rating of the recipe")
+    comments: str = Field(description="Reason for the rating")
+
 
 class GLM_langchain:
     def __init__(self, token):
@@ -188,7 +192,37 @@ class GLM_langchain:
         )
         cookingSteps = chain.invoke(transcript)
         return cookingSteps
+    
+    def getRating(self, transcript):
+        json_parser = JsonOutputParser(pydantic_object=RatingData)
+        ratingProcessor = PromptTemplate(
+            input_variables=["transcript"],
+            template='''
+                You are a helpful assistant. You will be provided with the transcript of a cooking video.
+                Based on the difficulty of this recipe, provide a rating of the recipe from 1 to 3.
 
+                The definition for difficulty is as follows:
+                1 - Easy: Requires little, to basic cooking skills and needs common ingredients (or offers easily found substitutions).
+                2 - Moderate: Requires more experience, more prep and cooking time (possibly cooking several things within the time), and maybe some ingredients you don't already have in your kitchen (but should still be able to find at your local grocery store).
+                3 - Hard: Challenging recipes that require more advanced skills and experience (will almost defiantly require you to make/prep multiple things) and maybe some special equipment and Ingredients.
+             
+                Transcript:{transcript}
+                
+                Think step by step. You should provide an overall rating, and why you chose that rating. You should decribe your reasoning in around 100 words.
+                Organize your response in a JSON format with the following keys: "rating" and "reason".
+            ''',
+            partial_variables={
+                "format_instructions": json_parser.get_format_instructions()},
+        )
+
+        chain = (
+            {"transcript": RunnablePassthrough()}
+            | ratingProcessor
+            | self.llm
+            | json_parser
+        )
+        rating = chain.invoke(transcript)
+        return rating
 
 """
         listParser = CommaSeparatedListOutputParser()

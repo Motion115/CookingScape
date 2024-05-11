@@ -2,6 +2,13 @@ export interface NaviInfo {
   steps: CookingStage;
   ingredients: ingredientsItem;
   sceneList: SceneListItem;
+  difficulty: DifficultyRating;
+  transcript: string;
+}
+
+export interface DifficultyRating {
+  rating: number,
+  reason: string
 }
 
 export interface CookingStage {
@@ -52,4 +59,8 @@ export interface NodeDataParams {
 
 export interface APIPostData {
   description: string,
+}
+
+export interface APIIngredientVis {
+  ingredient: string
 }

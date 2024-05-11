@@ -1,4 +1,5 @@
 import gc
+import math
 import torch
 from utils.S3D.s3dg import S3D
 import cv2
@@ -152,7 +153,10 @@ class MIL_NCE:
             for i in range(32 - len(frames)):
                 frames.append(frames[-1])
         else:
-            frames = frames[:32]
+            # get the minimun multiple of 32
+            min_multiple = math.floor(len(frames) / 32) * 32
+            # min_multiple = 32
+            frames = frames[:min_multiple]
 
         # Convert the list of frames to a PyTorch tensor
         video_tensor = torch.stack(frames)
@@ -185,20 +189,38 @@ class MIL_NCE:
         # video clip is a (C, T, H, W) tensor, add another dimension
         # channels, frames, height, width
         video_clip = video_clip.unsqueeze(0)
-        # load video_clip to gpu
-        video_clip = video_clip.to(self.device)
-        with torch.no_grad():
+        # check if there is multiple rounds
+        periods = video_clip.shape[2] // 32
+        video_embedding = []
+        video_mixed_5c = []
+        for i in range(periods):
+            # get the start and end index of the current round
+            start_index = i * 32
+            end_index = (i + 1) * 32
+            # get the current round
+            current_round = video_clip[:, :, start_index:end_index, :, :]
             # get the video encoding
-            video_output = self.net(video_clip)
-            video_clip = video_clip.to("cpu")
-            video_clip = None
-            del video_clip
-            torch.cuda.empty_cache()
-            torch.cuda.synchronize()
-        # offload video_output to cpu
-        video_embedding = video_output['video_embedding'].cpu()
-        video_mixed_5c = video_output["mixed_5c"].cpu()
-        # mixed_5c is for classification
+            current_round = current_round.to(self.device)
+            with torch.no_grad():
+                # get the video encoding
+                current_round_output = self.net(current_round)
+                # offload current_round_output to cpu
+                current_round = current_round.to("cpu")
+                current_round = None
+                del current_round
+                torch.cuda.empty_cache()
+                torch.cuda.synchronize()
+                # offload current_round_output to cpu
+                video_embedding_cur = current_round_output['video_embedding'].cpu()
+                video_mixed_5c_cur = current_round_output["mixed_5c"].cpu()
+                
+                video_embedding.append(video_embedding_cur)
+                video_mixed_5c.append(video_mixed_5c_cur)
+        # use torch to take the average of the video_embedding and video_mixed_5c
+        video_embedding = torch.cat(video_embedding, dim=0)
+        video_mixed_5c = torch.cat(video_mixed_5c, dim=0)
+        video_embedding = torch.mean(video_embedding, dim=0, keepdim=True)
+        video_mixed_5c = torch.mean(video_mixed_5c, dim=0, keepdim=True)
         return video_embedding, video_mixed_5c
     
     def get_stacked_text_encoding(self, text_list):

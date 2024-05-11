@@ -67,5 +67,11 @@ def process_request():
         "clip_id": clip_id_list
     }
 
+@app.route('/ingredientVideoSim', methods=['POST'])
+def process_request_ingredient():
+    data = request.get_json()
+    resp = vlm.ingredients_vidtag([data["ingredient"]])
+    return resp
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000, host="127.0.0.1")
