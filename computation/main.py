@@ -47,50 +47,24 @@ def instructional_cooking_video_knowledge_extraction_computation_pipeline(
 
     transcript = videoPreprocessingModel.get_transcript()[0]
 
-
     languageModel_GLM = GLM_langchain(token=getToken(glm_token_file))
 
-    print("- Evaluating difficulty")
-    # 5-shot decision-making
-    # ratingList = []
-    # for i in tqdm(range(5)):
-    #     rating = languageModel_GLM.getRating(transcript)
-    #     ratingList.append(rating)
-    # for rate in ratingList:
-    #     print(rate["rating"])
-    # # count the ratings
-    # ratingCount = {}
-    # for rate in ratingList:
-    #     if rate["rating"] in ratingCount:
-    #         ratingCount[rate["rating"]] += 1
-    #     else:
-    #         ratingCount[rate["rating"]] = 1
-    # # get the most common rating
-    # finalVerdict = max(ratingCount, key=ratingCount.get)
-    # for rate in ratingList:
-    #     if rate["rating"] == finalVerdict:
-    #         finalRateData = rate
-    #         break
-
-    # with open("./rate.json", "w") as f:
-    #     json.dump(finalRateData, f)
-
-    finalRateData = json.load(open("./rate.json", "r"))
-
     print("- Extracting Cooking Steps")
-    # milestonedCookingSteps = languageModel_GLM.getCookingSteps(transcript)
-    # sequentialCookingSteps = languageModel_GLM.getSequentialCookingSteps(transcript)
+    milestonedCookingSteps = languageModel_GLM.getCookingSteps(transcript)
+    sequentialCookingSteps = languageModel_GLM.getSequentialCookingSteps(transcript)
+
+    # print(milestonedCookingSteps, sequentialCookingSteps)
 
     # # save cooking steps as json
     # with open("./seqCookingSteps.json", "w") as f:
     #     json.dump(sequentialCookingSteps, f)
 
     # load cookingSteps.json
-    with open("./cookingSteps.json", "r") as f:
-        milestonedCookingSteps = json.load(f)
+    # with open("./cookingSteps.json", "r") as f:
+    #     milestonedCookingSteps = json.load(f)
 
-    with open("./seqCookingSteps.json", "r") as f:
-        sequentialCookingSteps = json.load(f)
+    # with open("./seqCookingSteps.json", "r") as f:
+    #     sequentialCookingSteps = json.load(f)
 
     cookingStepsTotal = milestonedCookingSteps
     cookingStepsTotal["sequential"] = sequentialCookingSteps
@@ -115,6 +89,33 @@ def instructional_cooking_video_knowledge_extraction_computation_pipeline(
         milestonedCookingSteps)
     tagged_ingredients = visionLanguageModel.ingredients_vidtag(
         ingredientsList)
+    
+    print("- Evaluating difficulty")
+    # 5-shot decision-making
+    ratingList = []
+    for i in tqdm(range(5)):
+        rating = languageModel_GLM.getRating(transcript)
+        ratingList.append(rating)
+    # for rate in ratingList:
+    #     print(rate["rating"])
+    # count the ratings
+    ratingCount = {}
+    for rate in ratingList:
+        if rate["rating"] in ratingCount:
+            ratingCount[rate["rating"]] += 1
+        else:
+            ratingCount[rate["rating"]] = 1
+    # get the most common rating
+    finalVerdict = max(ratingCount, key=ratingCount.get)
+    for rate in ratingList:
+        if rate["rating"] == finalVerdict:
+            finalRateData = rate
+            break
+
+    # with open("./rate.json", "w") as f:
+    #     json.dump(finalRateData, f)
+
+    # finalRateData = json.load(open("./rate.json", "r"))
 
     # merge ingredients and cooking steps into one dict
     video_info_dict = {
@@ -131,16 +132,23 @@ def instructional_cooking_video_knowledge_extraction_computation_pipeline(
 
 
 if __name__ == "__main__":
-    instructional_cooking_video_knowledge_extraction_computation_pipeline(
-        video_file_path="./data/",
-        video_name="Steak-GR",
-        video_encoding=".mp4",
-        whisper_ASR_model_path="E:/Data(E)/Models/Openai-Whisper",
-        glm_token_file="./utils/api_config.json",
-        vlm_weight_path="utils/S3D/s3d_howto100m.pth",
-        vlm_dictionary_filepath="utils/S3D/s3d_dict.npy",
-        persistent_calc=True
-    )
+    videoList = [
+        # "Steak-GR",
+        # "Steak-Wolfgang",
+        # "GR-SzechuanChicken",
+        "GR-Branzino",
+    ]
+    for video in videoList:
+        instructional_cooking_video_knowledge_extraction_computation_pipeline(
+            video_file_path="./data/",
+            video_name=video,
+            video_encoding=".mp4",
+            whisper_ASR_model_path="E:/Data(E)/Models/Openai-Whisper",
+            glm_token_file="./utils/api_config.json",
+            vlm_weight_path="utils/S3D/s3d_howto100m.pth",
+            vlm_dictionary_filepath="utils/S3D/s3d_dict.npy",
+            persistent_calc=True
+        )
 
     # video = Video(
     #     file_path="./data/Coq_au_vin/",

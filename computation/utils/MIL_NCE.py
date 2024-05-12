@@ -154,8 +154,8 @@ class MIL_NCE:
                 frames.append(frames[-1])
         else:
             # get the minimun multiple of 32
-            min_multiple = math.floor(len(frames) / 32) * 32
-            # min_multiple = 32
+            # min_multiple = math.floor(len(frames) / 32) * 32
+            min_multiple = 32
             frames = frames[:min_multiple]
 
         # Convert the list of frames to a PyTorch tensor

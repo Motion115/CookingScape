@@ -18,11 +18,13 @@ export default function GridVis(props: GridVisProps) {
   const sceneList = configData.sceneList;
 
   const dispatch = useDispatch<AppDispatch>();
-
-  const xScale = useMemo(() => {
-    const idx = data.map((d, i) => i.toString());
-    return d3.scaleBand().domain(idx).range([0, width]);
-  }, [data, width]);
+  
+  const idxRange = data.map((d, i) => i.toString());
+  const xScale = d3.scaleBand().domain(idxRange).range([0, width]);
+  // useMemo(() => {
+  //   const idx = data.map((d, i) => i.toString());
+  //   return d3.scaleBand().domain(idx).range([0, width]);
+  // }, [data, width]);
 
   const dataRange = d3.extent(data) as number[];
   const colorScale = d3.scaleDiverging(

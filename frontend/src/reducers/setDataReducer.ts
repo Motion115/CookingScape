@@ -16,8 +16,15 @@ const setDataSlice = createSlice({
   initialState,
   reducers: {
     addNewIngredient: (state, action) => {
-      console.log(action.payload)
       state.ingredients = { ...state.ingredients, ...action.payload };
+      // console.log(action.payload);
+    },
+    replaceExistingIngredient: (state, action) => {
+      // delete action.payload.pickedIngredient
+      // console.log(action.payload);
+      let newList = { ...state.ingredients, ...action.payload.responseData };
+      delete newList[action.payload.pickedIngredient];
+      state.ingredients = newList;
     }
   },
   extraReducers: (builder) => {
@@ -40,6 +47,6 @@ export const loadDataAsync = createAsyncThunk(
   }
 );
 
-export const { addNewIngredient } = setDataSlice.actions;
+export const { addNewIngredient, replaceExistingIngredient } = setDataSlice.actions;
 
 export default setDataSlice.reducer;

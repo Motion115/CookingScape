@@ -35,7 +35,7 @@ def getModels(
 
 llm, vlm = getModels(
         video_file_path="./data/",
-        video_name="Steak-GR",
+        video_name="Steak-Wolfgang",
         video_encoding=".mp4",
         glm_token_file="./utils/api_config.json",
         vlm_weight_path="utils/S3D/s3d_howto100m.pth",
@@ -72,6 +72,26 @@ def process_request_ingredient():
     data = request.get_json()
     resp = vlm.ingredients_vidtag([data["ingredient"]])
     return resp
+
+@app.route('/ingredientReplacer', methods=['POST'])
+def process_request_replacer():
+    data = request.get_json()
+    usedIngredients = data["usedIngredient"]
+    replacementIngredient = data["ingredient"]
+    transcript = data["transcript"]
+    original_resp = llm.explainIngredient(transcript, usedIngredients)
+    if replacementIngredient != "":
+        alter_resp = llm.exploreAlternativeIngredient(
+            transcript, usedIngredients, replacementIngredient)
+        return {
+            "ingredientUse": original_resp,
+            "ingredientAlter": alter_resp
+        }
+    else:
+        return {
+            "ingredientUse": original_resp
+        }
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000, host="127.0.0.1")

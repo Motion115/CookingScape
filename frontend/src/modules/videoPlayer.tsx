@@ -6,9 +6,15 @@ import { AppDispatch, RootState } from "../store";
 import { VideoState } from "../types/InfoTypes";
 import { recordPlayerProgression } from "../reducers/playerTimeReducer";
 
-const VideoPlayer: React.FC = () => {
+interface VideoPlayerProps {
+  videoName: string
+}
+
+const VideoPlayer = (props: VideoPlayerProps) => {
   const [timerId, setTimerId] = React.useState<NodeJS.Timeout | null>(null);
   const [isPlay, setIsPlay] = React.useState(false);
+
+  const {videoName} = props;
 
   const currentClip = useSelector((state: RootState) => state.playerState);
   const dispatch = useDispatch<AppDispatch>();
@@ -58,8 +64,8 @@ const VideoPlayer: React.FC = () => {
   return (
     <div>
       <ReactPlayer
-        style={{ maxWidth: "100%", maxHeight: "100%", margin: "auto"}}
-        url="./Steak-GR.mp4"
+        style={{ maxWidth: "100%", maxHeight: "100%", margin: "auto" }}
+        url={videoName}
         controls={true}
         playing={isPlay}
         ref={setPlayerRef}

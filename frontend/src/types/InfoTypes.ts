@@ -64,3 +64,16 @@ export interface APIPostData {
 export interface APIIngredientVis {
   ingredient: string
 }
+
+export interface APIIngredientReplacer extends APIIngredientVis {
+  usedIngredient: string;
+  transcript: string;
+}
+
+export interface IngredientReplacer {
+  ingredientUse: string;
+  ingredientAlter?: {
+    isReplacable: boolean,
+    explaination: string
+  }
+}

@@ -35,6 +35,10 @@ class RatingData(BaseModel):
     rating: int = Field(description="Difficulty rating of the recipe")
     comments: str = Field(description="Reason for the rating")
 
+class ReplacementData(BaseModel):
+    isReplacable: bool = Field(description="Whether the ingredient can be replaced")
+    explaination: str = Field(description="Explanation")
+
 
 class GLM_langchain:
     def __init__(self, token):
@@ -126,7 +130,8 @@ class GLM_langchain:
                 Cooking is the stage where ingredients are cooked, such as boiling, frying, baking, etc.\
                 Assembly is the stage where cooked ingredients are assembled into a finished dish.\
                 
-                Think step by step. First, Write the subtasks in their unit form, which means no further separation can be found in this process.
+                Think step by step. First, Write the subtasks in their unit form (using around 10 words), which means no further separation can be found in this process.
+                Make sure only one ingredient exist in each subtask.
                 Then, after extracting all the subtasks, try to categorize the steps into preparation, cooking, and assembly.
                 
                 Transcript:{transcript}
@@ -179,6 +184,8 @@ class GLM_langchain:
                 You are a helpful assistant. You will be provided with the transcript of a cooking video.
                 Your task is to provide a step-by-step summary of the recipe.\
                 Use approximately 10 words to describe each step.
+
+                Organize the recipe into a numbered list.
                                 
                 Transcript:{transcript}
             ''',
@@ -199,12 +206,14 @@ class GLM_langchain:
             input_variables=["transcript"],
             template='''
                 You are a helpful assistant. You will be provided with the transcript of a cooking video.
-                Based on the difficulty of this recipe, provide a rating of the recipe from 1 to 3.
+                Based on the difficulty of this recipe, provide a rating of the recipe from 1 to 5.
 
                 The definition for difficulty is as follows:
                 1 - Easy: Requires little, to basic cooking skills and needs common ingredients (or offers easily found substitutions).
-                2 - Moderate: Requires more experience, more prep and cooking time (possibly cooking several things within the time), and maybe some ingredients you don't already have in your kitchen (but should still be able to find at your local grocery store).
-                3 - Hard: Challenging recipes that require more advanced skills and experience (will almost defiantly require you to make/prep multiple things) and maybe some special equipment and Ingredients.
+                2 - Begineer: Requires some experience, and some prep, but not much cooking time.
+                3 - Intermediate: Requires more experience, more prep and cooking time (possibly cooking several things within the time), and maybe some ingredients you don't already have in your kitchen (but should still be able to find at your local grocery store).
+                4 - Advanced: Requires a lot of prep, a lot of cooking time, and some special ingredients or equipment.
+                5 - Hard: Challenging recipes that require more advanced skills and experience (will almost defiantly require you to make/prep multiple things) and maybe some special equipment and Ingredients.
              
                 Transcript:{transcript}
                 
@@ -224,6 +233,63 @@ class GLM_langchain:
         rating = chain.invoke(transcript)
         return rating
 
+    def explainIngredient(self, transcript, ingredient):
+        explanationProcessor = PromptTemplate(
+            input_variables=["transcript", "ingredient"],
+            template='''
+                You are a helpful assistant. You will be provided with the transcript of a cooking video.
+                Explain the use of `{ingredient}` in the recipe. At what step does it come into play? What is its purpose?
+
+                Your response should be in around 100 words.
+
+                Transcript:{transcript}
+            '''
+        )
+        chain = (       
+            {"transcript": RunnablePassthrough(), "ingredient": RunnablePassthrough()}
+            | explanationProcessor
+            | self.llm
+            | StrOutputParser()
+        )
+        explanation = chain.invoke({
+            "transcript":transcript,
+            "ingredient":ingredient
+            })
+        return explanation
+    
+    def exploreAlternativeIngredient(self, transcript, usedIngredient, newIngredient):
+        json_parser = JsonOutputParser(pydantic_object=ReplacementData)
+        explanationProcessor = PromptTemplate(
+            input_variables=["transcript", "usedIngredient", "newIngredient"],
+            template='''
+                You are a helpful assistant. You will be provided with the transcript of a cooking video.
+                Use your culinary knowldege. 
+                Can `{newIngredient}` be used as an alternative to `{usedIngredient}`?
+
+                An ingredient is considered replacable if it serves the same purpose as the original ingredient without creating unexpected sideeffects.
+
+                Think step by step. 
+                First, provide if `{newIngredient}` can be used as an alternative to `{usedIngredient}` with a boolean answer (true or false).
+                Then, provide explaination for your decision in around 100 words.
+                Organize your response in a JSON format with the following keys: "isReplacable" and "explaination".
+                
+                Transcript:{transcript}
+            ''',
+            partial_variables={
+                "format_instructions": json_parser.get_format_instructions()},
+        )
+        chain = (
+            {"transcript": RunnablePassthrough(), "usedIngredient": RunnablePassthrough(), "newIngredient": RunnablePassthrough()}
+            | explanationProcessor
+            | self.llm
+            | json_parser
+        )
+        explanation = chain.invoke({   
+            "transcript":transcript,
+            "oldIngredient": usedIngredient,
+            "newIngredient":newIngredient
+        })
+        return explanation
 """
         listParser = CommaSeparatedListOutputParser()
         format_instructions = listParser.get_format_instructions()

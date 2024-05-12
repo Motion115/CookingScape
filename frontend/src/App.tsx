@@ -19,8 +19,11 @@ const App: React.FC = () => {
   // const configData = useSelector((state: RootState) => state.setData);
   const dispatch = useDispatch<AppDispatch>();
 
+  const video = "GR-Branzino";
+  const folder = "./data/" + video + "/";
+
   const loadData = () => {
-    dispatch(loadDataAsync("./video_info.json"));
+    dispatch(loadDataAsync(folder + "video_info.json"));
   }
 
   useEffect(() => {
@@ -41,7 +44,7 @@ const App: React.FC = () => {
           <Layout dir="vertical">
             <Row gutter={[16, 24]}>
               <Col span={12}>
-                <VideoPlayer />
+                <VideoPlayer videoName={folder + video + ".mp4"} />
               </Col>
               <Col span={12}>
                 <IngredientMap />
