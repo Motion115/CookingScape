@@ -118,9 +118,8 @@ class GLM_langchain:
         renewedIngredientList = ingredientsExtractorChain.invoke(analysisScript)
         # print(renewedIngredientList)
         return renewedIngredientList
-
-    def getCookingSteps(self, transcript, total_length):
-        step_length = total_length // 3
+    
+    def getCookingSteps(self, transcript):
         cookingStepsProcessor = PromptTemplate(
             input_variables=["transcript"],
             template='''
@@ -137,27 +136,25 @@ class GLM_langchain:
 
                 Then, after extracting all the subtasks, try to categorize the steps into preparation, cooking, and assembly.
                 The definition of preparation, cooking and assembly are as follows:
-                  1) Preparation is the stage where raw ingredients are prepared, such as mixing, chopping, grating, etc. No heating is allowed during this stage.\
+                  1) Preparation is the stage where raw ingredients are prepared, such as mixing, chopping, grating, etc. No heating, i.e., using temperature to cook ingredients, is allowed during this stage.\
                   2) Cooking is the stage where ingredients are cooked, such as boiling, frying, baking, etc.\
                   3) Assembly is the stage where cooked ingredients are assembled into a finished dish.\
-                Each subtask should not have more than {length} steps, merge steps that are too detailed.
+                Put the definition in mind when grouping the subtasks. You should also maintain the correct sequence of subtasks.
                 
                 Transcript:{transcript}
             ''',
         )
-        output_parser = StrOutputParser()
         chain = (
-            {"transcript": RunnablePassthrough(), "length": RunnablePassthrough()}
+            {"transcript": RunnablePassthrough()}
             | cookingStepsProcessor
             | self.llm
-            | output_parser
+            | StrOutputParser()
         )
 
-        cookingStepsRaw = chain.invoke({
-            "transcript": transcript, "length": step_length})
+        cookingStepsRaw = chain.invoke(transcript)
+
 
         json_parser = JsonOutputParser(pydantic_object=CookingSteps)
-
         cookStepOrganizer = PromptTemplate(
             input_variables=["description"],
             template='''
@@ -192,7 +189,7 @@ class GLM_langchain:
             template='''
                 You are a helpful assistant. You will be provided with the transcript of a cooking video.
                 Your task is to provide a step-by-step summary of the recipe.\
-                Use approximately 10 words to describe each step.
+                Use approximately 15 words to describe each step.
 
                 Organize the recipe into a numbered list.
                                 
@@ -299,6 +296,12 @@ class GLM_langchain:
             "newIngredient":newIngredient
         })
         return explanation
+    
+
+
+
+
+
 """
         listParser = CommaSeparatedListOutputParser()
         format_instructions = listParser.get_format_instructions()

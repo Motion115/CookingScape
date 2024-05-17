@@ -8,6 +8,8 @@ import torchvision.transforms.functional as F
 import os
 from tqdm import tqdm
 
+EMB_VIDEO_FRAMES = 32
+
 class MIL_NCE:
     def __init__(self, weight_filepath, dictionary_filepath, video_filepath):
         self.weight_filepath = weight_filepath
@@ -89,6 +91,34 @@ class MIL_NCE:
         for i in range(0, len(ingredients_list)):
             similarity_dict[ingredients_list[i]] = similarity[i].tolist()
         return similarity_dict
+    
+    def weighted_instructiontag(self, steps_list):
+        # get MIL-NCE text embedding
+        steps = []
+        weight_emb = []
+        for step in steps_list:
+            steps.append(step["step"])
+            weight_emb.append(step["step_similarity_vector"])
+        text_mat = self.get_stacked_text_encoding(steps)
+        similarity = self.calc_similarity(text_mat, self.video_embedding)
+        weight_emb = torch.stack(weight_emb)
+        similarity = torch.mul(similarity, weight_emb)
+
+        if 10 < self.video_embedding.shape[0]:
+            k_val = 10
+        else:
+            k_val = self.video_embedding.shape[0]
+        # topk
+        topk_values, topk_indices = torch.topk(similarity, k_val, dim=1)
+        topk_indices += 1
+        step_dict = {}
+        for i in range(0, len(steps_list)):
+            step_dict[f"step_{i+1}"] = {
+                "description": steps_list[i]["step"],
+                "clip_id": topk_indices[i].tolist()
+            }
+        return step_dict
+
 
     def regrouped_steps_vidtag(self, steps_dict):
         """
@@ -115,10 +145,17 @@ class MIL_NCE:
             k_val = self.video_embedding.shape[0]
 
         for key, steps_in_stage in steps_dict.items():
-            # get the text embedding
-            text_mat = self.get_stacked_text_encoding(steps_in_stage)
-            # calculate the similarity between video and text
+            steps = []
+            weight_emb = []
+            for step in steps_in_stage:
+                steps.append(step["step"])
+                weight_emb.append(step["step_similarity_vector"])
+            # get the text embedding    
+            text_mat = self.get_stacked_text_encoding(steps)
             similarity = self.calc_similarity(text_mat, self.video_embedding)
+            weight_emb = torch.stack(weight_emb)
+            similarity = torch.mul(similarity, weight_emb)
+            
             # get the top-k similarity
             topk_values, topk_indices = torch.topk(similarity, k_val, dim=1)
             # add 1 on all elements to match indexing
@@ -126,7 +163,7 @@ class MIL_NCE:
             for i in range(0, len(steps_in_stage)):
                 # key is step{i}, value include description and top_3 clip id
                 steps_dict_new[key][f"step_{i+1}"] = {
-                    "description": steps_in_stage[i],
+                    "description": steps_in_stage[i]["step"],
                     "clip_id": topk_indices[i].tolist()
                 }
                 # include the similarity values also?
@@ -149,13 +186,13 @@ class MIL_NCE:
             frames.append(tensor_frame)
         
         # check if there is 32 tensors, if not, repeat the last one, else, truncate
-        if len(frames) < 32:
-            for i in range(32 - len(frames)):
+        if len(frames) < EMB_VIDEO_FRAMES:
+            for i in range(EMB_VIDEO_FRAMES - len(frames)):
                 frames.append(frames[-1])
         else:
             # get the minimun multiple of 32
             # min_multiple = math.floor(len(frames) / 32) * 32
-            min_multiple = 32
+            min_multiple = EMB_VIDEO_FRAMES
             frames = frames[:min_multiple]
 
         # Convert the list of frames to a PyTorch tensor
@@ -190,13 +227,13 @@ class MIL_NCE:
         # channels, frames, height, width
         video_clip = video_clip.unsqueeze(0)
         # check if there is multiple rounds
-        periods = video_clip.shape[2] // 32
+        periods = video_clip.shape[2] // EMB_VIDEO_FRAMES
         video_embedding = []
         video_mixed_5c = []
         for i in range(periods):
             # get the start and end index of the current round
-            start_index = i * 32
-            end_index = (i + 1) * 32
+            start_index = i * EMB_VIDEO_FRAMES
+            end_index = (i + 1) * EMB_VIDEO_FRAMES
             # get the current round
             current_round = video_clip[:, :, start_index:end_index, :, :]
             # get the video encoding
@@ -248,10 +285,16 @@ class MIL_NCE:
     def calc_similarity(self, text_mat, vid_mat):
         # calculate the similarity between video and text
         similarity = torch.matmul(text_mat, vid_mat.t())
-        # text_norm = torch.norm(text_mat, dim=1)
-        # vid_norm = torch.norm(vid_mat, dim=1)
-        # norm_product = torch.outer(text_norm, vid_norm)
-        # cosine_similarity = similarity / norm_product
+        # note here do not calculate cosine similarity due to MIL-NCE is optimize on pair-wise similarity
+        return similarity
+    
+    def calc_cosine_similarity(self, text_mat, vid_mat):
+        # calculate the similarity between video and text
+        similarity = torch.matmul(text_mat, vid_mat.t())
+        text_norm = torch.norm(text_mat, dim=1)
+        vid_norm = torch.norm(vid_mat, dim=1)
+        norm_product = torch.outer(text_norm, vid_norm)
+        cosine_similarity = similarity / norm_product
 
         # note here do not calculate cosine similarity due to MIL-NCE is optimize on pair-wise similarity
         return similarity

@@ -4,6 +4,7 @@ from utils.MIL_NCE import MIL_NCE
 from utils.LM_hook import GLM_langchain, Qwen1_8
 from utils.zhipu.generateToken import getToken
 from utils.foodNER import foodNER
+from utils.probabilityWeighting import probabilityWeighting
 import json
 import os
 import pandas as pd
@@ -35,60 +36,61 @@ def instructional_cooking_video_knowledge_extraction_computation_pipeline(
         ASR_model_path=whisper_ASR_model_path,
         isShortForm=shortForm)
     
-    # read the scene list
-    scene_list = pd.read_csv(f"{video_info_directory}/scene_list.csv")
-    # Convert the "Start Timecode" column to timedelta
-    scene_list["Start Timecode"] = pd.to_timedelta(
-        scene_list["Start Timecode"]).dt.total_seconds()
-    selected_columns = scene_list[[
-        "Scene Number", "Start Timecode", "Length (seconds)"]]
-    # rename the columns
-    selected_columns.columns = ["id", "startTime", "duration"]
-    # pivot to dictionary
-    video_info_dict = selected_columns.set_index('id').to_dict(orient='index')
+    complexSceneList = videoPreprocessingModel.get_scene_list()
 
     transcript = videoPreprocessingModel.get_transcript()[0]
 
     languageModel_GLM = GLM_langchain(token=getToken(glm_token_file))
 
     print("- Extracting Cooking Steps")
-    milestonedCookingSteps = languageModel_GLM.getCookingSteps(transcript, len(scene_list))
+    milestonedCookingSteps = languageModel_GLM.getCookingSteps(transcript)
     sequentialCookingSteps = languageModel_GLM.getSequentialCookingSteps(transcript)
 
     # print(milestonedCookingSteps, sequentialCookingSteps)
 
-    # # save cooking steps as json
-    # with open("./seqCookingSteps.json", "w") as f:
-    #     json.dump(sequentialCookingSteps, f)
+    # save cooking steps as json
+    # with open("./milestonedCookingSteps.json", "w") as f:
+    #     json.dump(milestonedCookingSteps, f)
+
 
     # load cookingSteps.json
-    # with open("./cookingSteps.json", "r") as f:
+    # with open("./milestonedCookingSteps.json", "r") as f:
     #     milestonedCookingSteps = json.load(f)
 
     # with open("./seqCookingSteps.json", "r") as f:
     #     sequentialCookingSteps = json.load(f)
 
+    weightGenerator = probabilityWeighting(sequentialCookingSteps, complexSceneList)
+    weighted_sequential_steps = weightGenerator.getWeightingVector()
+    weighted_milestoned_steps = {}
+    for key, val in milestonedCookingSteps.items():
+        tempWG = probabilityWeighting(val, complexSceneList)
+        weighted_milestoned_steps[key] = tempWG.getWeightingVector()
+
     cookingStepsTotal = milestonedCookingSteps
     cookingStepsTotal["sequential"] = sequentialCookingSteps
 
-    # print(milestonedCookingSteps)
+    cookingStepsTotalWeight = weighted_milestoned_steps
+    cookingStepsTotalWeight["sequential"] = weighted_sequential_steps
+
     print("- Extracting Food Entities")
     foodEntityRecognition = foodNER()
     ingredientsList = foodEntityRecognition.extractEntityFromSteps(
         cookingSteps=cookingStepsTotal,
         isLemmantize=True)
 
-    # print(ingredientsList)
-
-    # languageModel_GLM.backtraceIngredients(ingredientsList, sequentialCookingSteps)
-
     visionLanguageModel = MIL_NCE(
         weight_filepath=vlm_weight_path,
         dictionary_filepath=vlm_dictionary_filepath,
         video_filepath=f".cache/{video_name}/")
-
+    
+    # weightedTags = visionLanguageModel.weighted_instructiontag(weighted_sequential_steps)
+    
     tagged_cooking_steps = visionLanguageModel.regrouped_steps_vidtag(
-        milestonedCookingSteps)
+        cookingStepsTotalWeight)
+    
+    # tagged_cooking_steps["sequential"] = weightedTags
+    
     tagged_ingredients = visionLanguageModel.ingredients_vidtag(
         ingredientsList)
     
@@ -123,7 +125,7 @@ def instructional_cooking_video_knowledge_extraction_computation_pipeline(
     video_info_dict = {
         "steps": tagged_cooking_steps,
         "ingredients": tagged_ingredients,
-        "scene_list": video_info_dict,
+        "scene_list": videoPreprocessingModel.read_scene_from_file(),
         "difficulty": finalRateData,
         "transcript": transcript,
     }

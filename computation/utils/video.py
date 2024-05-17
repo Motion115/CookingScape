@@ -1,6 +1,8 @@
 import os
 import scenedetect
 import json
+import pandas as pd
+from sentence_transformers import SentenceTransformer
 '''
 Prequsite:
 - Ensure that ffmpeg is installed and add to system path
@@ -14,10 +16,13 @@ class Video:
         self.encoding = encoding
         self.ASR_model_path = ASR_model_path
         self.isShortForm = isShortForm
+
+        self.sentenceBERT = SentenceTransformer("all-MiniLM-L6-v2")
         self.open_file()
         self.transcribe()
         # self.extract_key_frames()
         self.detect_scenes()
+        self.transcript_scene_match()
     
     def open_file(self):
         # assemble the file_path and check if exist
@@ -122,6 +127,67 @@ class Video:
             return [sentence + separator for sentence in sentence_list]
         else:
             return [full_transcript]
+    
+
+    def read_scene_from_file(self):
+        scene_list = pd.read_csv(
+            '.cache/' + self.file_name + '/scene_list.csv')
+        # Convert the "Start Timecode" column to timedelta
+        scene_list["Start Timecode"] = pd.to_timedelta(
+            scene_list["Start Timecode"]).dt.total_seconds()
+        scene_list["End Timecode"] = pd.to_timedelta(
+            scene_list["End Timecode"]).dt.total_seconds()
+        selected_columns = scene_list[[
+            "Scene Number", "Start Timecode", "Length (seconds)", "End Timecode"]]
+        # rename the columns
+        selected_columns.columns = ["id", "startTime", "duration","endTime"]
+        # pivot to list, elements are dictionary
+        scene_list = selected_columns.set_index("id").to_dict(orient="index")
+        return scene_list
+    
+    def get_timed_transcript(self):
+        json_transcript_path = '.cache/' + self.file_name + '/' + self.file_name + '.json'
+        with open(json_transcript_path, 'r') as f:
+            data = json.load(f)
+            f.close()
+        segmented_transcript = data["segments"]
+        simplified_list = []
+        for seg in segmented_transcript:
+            simplified_list.append({
+                "id": seg["id"],
+                "text": seg["text"],
+                "startTime": seg["start"],
+                "endTime": seg["end"]
+            })
+        return simplified_list
+        
+    def transcript_scene_match(self):
+        scene_list = self.read_scene_from_file()
+        timed_transcript = self.get_timed_transcript()
+        for id, scene in scene_list.items():
+            text = ""
+            for seg in timed_transcript:
+                # normal case
+                if seg["startTime"] >= scene["startTime"] and seg["endTime"] <= scene["endTime"]:
+                    text += seg["text"] + " "
+                # start case
+                elif seg["startTime"] < scene["startTime"] and seg["endTime"] > scene["startTime"]:
+                    text += seg["text"] + " "
+                # end case
+                elif seg["startTime"] < scene["endTime"] and seg["endTime"] > scene["endTime"]:
+                    text += seg["text"] + " "
+                else:
+                    continue
+            # add a attribute text to scene
+            vec = self.sentenceBERT.encode(text)
+            scene["text"] = text
+            scene["embedding"] = vec
+        self.scene_list = scene_list
+
+    def get_scene_list(self):
+        return self.scene_list
+
+        
 
 
             
