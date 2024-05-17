@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Layout, ConfigProvider, Typography, Row, Col, Button, FloatButton, Drawer } from "antd";
+import { Layout, ConfigProvider, Typography, Row, Col, Button, FloatButton, Drawer, Divider } from "antd";
 import THEME from "./looks/theme";
 import VideoPlayer from "./modules/videoPlayer";
 import IngredientMap from "./modules/IngredientMap";
@@ -19,7 +19,7 @@ const App: React.FC = () => {
   // const configData = useSelector((state: RootState) => state.setData);
   const dispatch = useDispatch<AppDispatch>();
 
-  const video = "GR-Branzino";
+  const video = "GR-FishChips";
   const folder = "./data/" + video + "/";
 
   const loadData = () => {
@@ -35,11 +35,11 @@ const App: React.FC = () => {
   return (
     <div className="app">
       <ConfigProvider theme={THEME}>
-        <Header>
+        {/* <Header>
           <Text style={{ fontSize: "20px", padding: "1%", fontWeight: "bold" }}>
             CookingNavigator
           </Text>
-        </Header>
+        </Header> */}
         <Content style={{ padding: "1%", margin: "0 auto" }}>
           <Layout dir="vertical">
             <Row gutter={[16, 24]}>
@@ -49,36 +49,40 @@ const App: React.FC = () => {
               <Col span={12}>
                 <IngredientMap />
               </Col>
-            </Row>
-            <Row gutter={[16, 24]}>
-              <Col span={24}>
-                <div style={{ width: "100%", height: "500px" }}>
+              <Col span={18}>
+                <div style={{ width: "100%", height: "420px" }}>
                   <MilestoneSteps />
                 </div>
               </Col>
-              {/* <Col span={12}>
-                <RecipeSteps />
+              <Col span={6}>
+                <div style={{ width: "100%", height: "420px", overflow: 'scroll' }}>
+                  <RecipeSteps />
+                </div>
               </Col>
-              <Col span={12}></Col> */}
             </Row>
           </Layout>
           <FloatButton
             icon={<InfoCircleOutlined />}
             type="default"
-            style={{ right: 20 }}
+            style={{ left: 20, top: 20 }}
             onClick={() => setIsInfoOpen(true)}
           />
-          <Drawer title="Instructions" onClose={() => setIsInfoOpen(false)} open={isInfoOpen}>
+          <Drawer
+            title="Instructions"
+            onClose={() => setIsInfoOpen(false)}
+            open={isInfoOpen}
+          >
             <Paragraph>
-              Reconnect the lines: drag the end with the triangle and connect to another node.
+              Reconnect the lines: drag the end with the triangle and connect to
+              another node.
               <br />
               Delete the line: drag the end and drop anywhere.
             </Paragraph>
           </Drawer>
         </Content>
-        <Footer style={{ height: "80px", padding: "1%", margin: "0 auto" }}>
+        {/* <Footer style={{ height: "80px", padding: "1%", margin: "0 auto" }}>
           © This project is in development stage. All rights reserved.
-        </Footer>
+        </Footer> */}
       </ConfigProvider>
     </div>
   );

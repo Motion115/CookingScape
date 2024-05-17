@@ -18,7 +18,7 @@ export default function RecipeSteps() {
 
   return (
     <div>
-      <Space direction="vertical">
+      <Space direction="vertical" size="small">
         {seqentialRecipe &&
           lodash.map(
             seqentialRecipe,

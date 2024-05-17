@@ -8,11 +8,12 @@ Prequsite:
 '''
 
 class Video:
-    def __init__(self, file_path, file_name, encoding, ASR_model_path):
+    def __init__(self, file_path, file_name, encoding, ASR_model_path, isShortForm):
         self.file_path = file_path
         self.file_name = file_name
         self.encoding = encoding
         self.ASR_model_path = ASR_model_path
+        self.isShortForm = isShortForm
         self.open_file()
         self.transcribe()
         # self.extract_key_frames()
@@ -73,7 +74,10 @@ class Video:
             if not os.path.exists(storage_clip_path):
                 os.makedirs(storage_clip_path)
             video_path = os.path.join('.cache/' + self.file_name, self.file_name + '.mp4')
-            scene_list, video_stream = self._find_scenes(video_path, storage_path)
+            if self.isShortForm:
+                scene_list, video_stream = self._find_scenes(video_path, storage_path, threshold=3, min_scene_len=5)
+            else:
+                scene_list, video_stream = self._find_scenes(video_path, storage_path)
             scenedetect.scene_manager.save_images(
                 scene_list = scene_list,
                 video = video_stream,
@@ -89,13 +93,13 @@ class Video:
         else:
             print(f"- Scene already exists for {self.file_name}.mp4")
 
-    def _find_scenes(self, video_path, storage_path, threshold=12):
+    def _find_scenes(self, video_path, storage_path, threshold=10, min_scene_len=15):
         video = scenedetect.open_video(video_path)
         scene_manager = scenedetect.SceneManager()
         # scene_manager.add_detector(
         #     scenedetect.ContentDetector(threshold=threshold))
         scene_manager.add_detector(
-            scenedetect.AdaptiveDetector(adaptive_threshold=threshold, min_scene_len=30)
+            scenedetect.AdaptiveDetector(adaptive_threshold=threshold, min_scene_len=min_scene_len)
         )
         # Detect all scenes in video from current position to end.
         scene_manager.detect_scenes(video, show_progress=True)

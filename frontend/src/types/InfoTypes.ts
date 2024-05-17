@@ -1,6 +1,6 @@
 export interface NaviInfo {
   steps: CookingStage;
-  ingredients: ingredientsItem;
+  ingredients: ingredientsItem[];
   sceneList: SceneListItem;
   difficulty: DifficultyRating;
   transcript: string;
@@ -45,7 +45,9 @@ export interface VideoTime {
 }
 
 export interface ingredientsItem {
-  [key: string]: number[]
+  ingredient: string,
+  similarity_vector: number[],
+  checked: boolean
 }
 
 export interface NodeDataParams {

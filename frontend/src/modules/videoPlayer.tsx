@@ -1,20 +1,22 @@
-import { Button } from "antd";
+import { Button, Flex, Popover, Rate, Space, Typography } from "antd";
 import React, { useEffect, useRef } from "react";
 import ReactPlayer from "react-player";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../store";
 import { VideoState } from "../types/InfoTypes";
 import { recordPlayerProgression } from "../reducers/playerTimeReducer";
+import { QuestionOutlined } from "@ant-design/icons";
+const { Text } = Typography;
 
 interface VideoPlayerProps {
-  videoName: string
+  videoName: string;
 }
 
 const VideoPlayer = (props: VideoPlayerProps) => {
   const [timerId, setTimerId] = React.useState<NodeJS.Timeout | null>(null);
   const [isPlay, setIsPlay] = React.useState(false);
 
-  const {videoName} = props;
+  const { videoName } = props;
 
   const currentClip = useSelector((state: RootState) => state.playerState);
   const dispatch = useDispatch<AppDispatch>();
@@ -61,16 +63,39 @@ const VideoPlayer = (props: VideoPlayerProps) => {
     jumpTo(currentClip);
   }, [currentClip]);
 
+  const configData = useSelector((state: RootState) => state.setData);
+  const difficultyRating = configData.difficulty;
+
   return (
     <div>
+      <div style={{ width: "70%", margin: "auto", textAlign: "center", padding: "0 0 10px 0" }}>
+        <Flex gap="small" align="center">
+          <Text>Difficulty</Text>
+          <Rate count={5} value={difficultyRating.rating} />
+          <Popover
+            content={
+              <div style={{ width: "300px", textAlign: "justify" }}>
+                <Text>{difficultyRating.reason}</Text>
+              </div>
+            }
+            title="Why this difficulty rating?"
+            placement="bottom"
+          >
+            <Button size="small" type="text">
+              Why this difficulty rating
+              <QuestionOutlined />
+            </Button>
+          </Popover>
+        </Flex>
+      </div>
       <ReactPlayer
-        style={{ maxWidth: "100%", maxHeight: "100%", margin: "auto" }}
+        style={{ maxWidth: "100%", maxHeight: "500px", margin: "auto" }}
         url={videoName}
         controls={true}
         playing={isPlay}
         ref={setPlayerRef}
-        width={"80%"}
-        height={"100%"}
+        width={"70%"}
+        height={"300px"}
         onPause={setCurrentTime}
         onSeek={setCurrentTime}
       />

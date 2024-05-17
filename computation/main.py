@@ -18,6 +18,7 @@ def instructional_cooking_video_knowledge_extraction_computation_pipeline(
     glm_token_file: str,
     vlm_weight_path: str,
     vlm_dictionary_filepath: str,
+    shortForm = False,
     persistent_calc=False
 ):
     video_info_directory = f"./.cache/{video_name}"
@@ -31,7 +32,8 @@ def instructional_cooking_video_knowledge_extraction_computation_pipeline(
         file_path=video_file_path,
         file_name=video_name,
         encoding=video_encoding,
-        ASR_model_path=whisper_ASR_model_path)
+        ASR_model_path=whisper_ASR_model_path,
+        isShortForm=shortForm)
     
     # read the scene list
     scene_list = pd.read_csv(f"{video_info_directory}/scene_list.csv")
@@ -50,7 +52,7 @@ def instructional_cooking_video_knowledge_extraction_computation_pipeline(
     languageModel_GLM = GLM_langchain(token=getToken(glm_token_file))
 
     print("- Extracting Cooking Steps")
-    milestonedCookingSteps = languageModel_GLM.getCookingSteps(transcript)
+    milestonedCookingSteps = languageModel_GLM.getCookingSteps(transcript, len(scene_list))
     sequentialCookingSteps = languageModel_GLM.getSequentialCookingSteps(transcript)
 
     # print(milestonedCookingSteps, sequentialCookingSteps)
@@ -136,7 +138,13 @@ if __name__ == "__main__":
         # "Steak-GR",
         # "Steak-Wolfgang",
         # "GR-SzechuanChicken",
-        "GR-Branzino",
+        # "GR-Branzino",
+        # "GR-Souffle",
+        # "Shorts-GR-ChilliChicken",
+        # 'Shorts-GR-SweetPepperSause',
+        # "Shorts-GR-MoroccanLamb",
+        # "Shorts-GR-SpicyBlackBeans",
+        "GR-FishChips"
     ]
     for video in videoList:
         instructional_cooking_video_knowledge_extraction_computation_pipeline(
@@ -147,6 +155,7 @@ if __name__ == "__main__":
             glm_token_file="./utils/api_config.json",
             vlm_weight_path="utils/S3D/s3d_howto100m.pth",
             vlm_dictionary_filepath="utils/S3D/s3d_dict.npy",
+            shortForm=False,
             persistent_calc=True
         )
 

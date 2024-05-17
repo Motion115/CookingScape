@@ -45,13 +45,13 @@ class foodNER:
         ner_entity_results = pipe(text)
         merged_entities = []
         for result in ner_entity_results:
-            entity, word = result["entity"] ,result["word"]
+            entity, word = result["entity"], result["word"]
             if entity == "B-FOOD":
-                if word.startswith("##"):
+                if word.startswith("##") and len(merged_entities) > 0:
                     merged_entities[-1] += word[2:]
                 else:
                     merged_entities.append(word)
-            elif entity == "I-FOOD":
+            elif entity == "I-FOOD" and len(merged_entities) > 0:
                 if word.startswith("##"):
                     merged_entities[-1] += word[2:]
                 else:

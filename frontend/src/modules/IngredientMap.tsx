@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useMemo } from "react";
 import {
   Button,
   Typography,
@@ -23,7 +23,7 @@ import {
   QuestionOutlined,
   SwapOutlined,
   CheckCircleTwoTone,
-  CloseCircleTwoTone
+  CloseCircleTwoTone,
 } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../store";
@@ -38,22 +38,19 @@ import {
   ingredientsItem,
 } from "../types/InfoTypes";
 import axios from "axios";
-import { addNewIngredient, replaceExistingIngredient } from "../reducers/setDataReducer";
+import {
+  addNewIngredient,
+  deleteSelectedIngredient,
+  replaceExistingIngredient,
+  setIngredientSelection,
+} from "../reducers/setDataReducer";
 
 const { Text, Paragraph } = Typography;
-
-interface IngredientTag {
-  ingredient: string;
-  checked: boolean;
-}
 
 export default function IngredientMap() {
   const configData = useSelector((state: RootState) => state.setData);
   const ingredientList = configData.ingredients;
-  const difficultyRating = configData.difficulty;
   const transcript = configData.transcript;
-
-  const [ingredientTag, setIngredientTag] = useState<IngredientTag[]>([]);
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -76,44 +73,17 @@ export default function IngredientMap() {
   useEffect(() => {
     // window.addEventListener("resize", handleResize);
     handleResize();
-
-    const dropDownItems = lodash.map(
-      ingredientList,
-      (val: number[], key: string) => {
-        return {
-          ingredient: key,
-          checked: false,
-        };
-      }
-    );
-    if (dropDownItems.length > 0) {
-      dropDownItems[0].checked = true;
-    }
-    setIngredientTag(dropDownItems);
     // return () => {
     //   window.removeEventListener("resize", handleResize);
     // };
   }, [ingredientList]);
 
   const handleTagClick = (ingredient: string) => {
-    // if there is duplicate, only use the first one
-    let newState = ingredientTag.map((item) => {
-      if (item.ingredient === ingredient) {
-        return {
-          ingredient: item.ingredient,
-          checked: !item.checked,
-        };
-      }
-      return item;
-    });
-    setIngredientTag(newState);
+    dispatch(setIngredientSelection(ingredient));
   };
 
   const deleteIngredient = (ingredient: string) => {
-    let newState = ingredientTag.filter((item) => {
-      return item.ingredient !== ingredient;
-    });
-    setIngredientTag(newState);
+    dispatch(deleteSelectedIngredient(ingredient));
   };
 
   const refreshSimilarityBar = async (mode: "add" | "replace" = "add") => {
@@ -126,11 +96,15 @@ export default function IngredientMap() {
           ingredient: newIngredientInput,
         }
       );
-      const responseData = response.data as unknown as ingredientsItem; // Parsed JSON response
-      if (mode === "add")
-        dispatch(addNewIngredient(responseData));
+      const responseData = response.data as unknown as {[key: string]: number[]}; // Parsed JSON response
+      let processedResp: ingredientsItem = {
+        ingredient: Object.keys(responseData)[0],
+        similarity_vector: responseData[Object.keys(responseData)[0]],
+        checked: false
+      }
+      if (mode === "add") dispatch(addNewIngredient(processedResp));
       else if (mode === "replace") {
-        dispatch(replaceExistingIngredient({responseData, pickedIngredient}))
+        dispatch(replaceExistingIngredient({ processedResp, pickedIngredient }));
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -165,7 +139,8 @@ export default function IngredientMap() {
   };
 
   const generateTags = () => {
-    return lodash.map(ingredientTag, (item: IngredientTag) => {
+    if (Array.isArray(ingredientList)) {
+    return ingredientList.map((item: ingredientsItem) => {
       return (
         <Tag
           color={item.checked ? "#1B7BFFcc" : "white"}
@@ -195,14 +170,16 @@ export default function IngredientMap() {
         </Tag>
       );
     });
+  }
   };
 
   const ingredientRenderer = () => {
+    if (Array.isArray(ingredientList)) {
     return (
       <Space direction="vertical">
-        {ingredientTag.map((item: IngredientTag) => {
+        {ingredientList && ingredientList.map((item: ingredientsItem) => {
           if (item.checked) {
-            const visData = ingredientList[item.ingredient];
+            const visData = item.similarity_vector;
             return (
               <div key={item.ingredient}>
                 <Text>{item.ingredient}</Text>
@@ -214,27 +191,27 @@ export default function IngredientMap() {
         })}
       </Space>
     );
+  }
   };
 
   const replacementRenderer = (replaceIngredient: IngredientReplacer) => {
     if (replaceIngredient.ingredientAlter?.isReplacable === true) {
       return (
-                        <div>
-                          <Space direction="horizontal">
-                            <CheckCircleTwoTone twoToneColor="#52c41a" />
-                            Replacable!
-                            <Button
-                              onClick={() => refreshSimilarityBar("replace")}
-                              size="small"
-                              loading={isLoading}
-                            >
-                              Replace
-                            </Button>
-                          </Space>
-                        </div>
-                      )
-    }
-    else if (replaceIngredient.ingredientAlter?.isReplacable === false) {
+        <div>
+          <Space direction="horizontal">
+            <CheckCircleTwoTone twoToneColor="#52c41a" />
+            Replacable!
+            <Button
+              onClick={() => refreshSimilarityBar("replace")}
+              size="small"
+              loading={isLoading}
+            >
+              Replace
+            </Button>
+          </Space>
+        </div>
+      );
+    } else if (replaceIngredient.ingredientAlter?.isReplacable === false) {
       return (
         <div>
           <Space direction="horizontal">
@@ -249,10 +226,8 @@ export default function IngredientMap() {
           </Space>
         </div>
       );
-      
     }
-    
-  }
+  };
 
   const addIngredient = () => {
     setIsModalOpen(true);
@@ -260,38 +235,46 @@ export default function IngredientMap() {
 
   const clearInputCache = () => {
     setNewIngredientInput("");
-    setReplaceIngredient(null)
+    setReplaceIngredient(null);
   };
+
+  const AddIngredientModal = (
+    <Modal
+      title="Add Ingredient"
+      open={isModalOpen}
+      onOk={() => {
+        setIsModalOpen(false);
+        refreshSimilarityBar();
+        clearInputCache();
+      }}
+      onCancel={() => {
+        setIsModalOpen(false);
+        clearInputCache();
+      }}
+    >
+      <Space.Compact>
+        <Input
+          placeholder="Enter Ingredient"
+          onChange={(e) => setNewIngredientInput(e.target.value)}
+          value={newIngredientInput}
+        />
+        <Button
+          onClick={() => refreshSimilarityBar()}
+          icon={<FontAwesomeIcon icon={faWandMagicSparkles} />}
+        />
+      </Space.Compact>
+    </Modal>
+  );
 
   return (
     <div ref={componentRef}>
       <Space direction="vertical">
-        <div>
+        {/* <div>
           Refresh width:{" "}
           <Button onClick={handleResize} shape="circle">
             <RedoOutlined />
           </Button>
-        </div>
-        <div>
-          <Flex gap="small" align="center">
-            <Text>Difficulty</Text>
-            <Rate count={5} value={difficultyRating.rating} />
-            <Popover
-              content={
-                <div style={{ width: "300px", textAlign: "justify" }}>
-                  <Text>{difficultyRating.reason}</Text>
-                </div>
-              }
-              title="Why this difficulty rating?"
-              placement="bottom"
-            >
-              <Button size="small" type="text">
-                Why this difficulty rating
-                <QuestionOutlined />
-              </Button>
-            </Popover>
-          </Flex>
-        </div>
+        </div> */}
         <div style={{ width: "100%" }}>
           <Flex justify="space-between" wrap="wrap" gap="small">
             {/* <Select
@@ -371,30 +354,7 @@ export default function IngredientMap() {
                 )}
               </Space>
             </Modal>
-            <Modal
-              title="Add Ingredient"
-              open={isModalOpen}
-              onOk={() => {
-                setIsModalOpen(false);
-                clearInputCache();
-              }}
-              onCancel={() => {
-                setIsModalOpen(false);
-                clearInputCache();
-              }}
-            >
-              <Space.Compact>
-                <Input
-                  placeholder="Enter Ingredient"
-                  onChange={(e) => setNewIngredientInput(e.target.value)}
-                  value={newIngredientInput}
-                />
-                <Button
-                  onClick={() => refreshSimilarityBar()}
-                  icon={<FontAwesomeIcon icon={faWandMagicSparkles} />}
-                />
-              </Space.Compact>
-            </Modal>
+            {AddIngredientModal}
           </Flex>
         </div>
         <div>{ingredientRenderer()}</div>

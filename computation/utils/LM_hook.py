@@ -119,33 +119,42 @@ class GLM_langchain:
         # print(renewedIngredientList)
         return renewedIngredientList
 
-    def getCookingSteps(self, transcript):
+    def getCookingSteps(self, transcript, total_length):
+        step_length = total_length // 3
         cookingStepsProcessor = PromptTemplate(
             input_variables=["transcript"],
             template='''
                 You are a helpful assistant. You will be provided with the transcript of a cooking video.
                 Your task is to divide the cooking into 3 phases: preparation, cooking, and assembly.\
                 
-                Preparation is the stage where raw ingredients are prepared, such as mixing, chopping, grating, etc. No heating is allowed during this stage.\
-                Cooking is the stage where ingredients are cooked, such as boiling, frying, baking, etc.\
-                Assembly is the stage where cooked ingredients are assembled into a finished dish.\
-                
-                Think step by step. First, Write the subtasks in their unit form (using around 10 words), which means no further separation can be found in this process.
-                Make sure only one ingredient exist in each subtask.
+                Think step by step.
+                First, Write the subtasks in their unit form (using around 10 words), which means no further separation can be found in this process.
+                When writing each subtask, make sure to use the format: verb + ingredient + cooking utensil.
+                Examples:
+                  1) Fry rice with high heat. 
+                  2) Sear steak on a cast iron pan. 
+                  3) Dice shallots on chopping board.
+
                 Then, after extracting all the subtasks, try to categorize the steps into preparation, cooking, and assembly.
+                The definition of preparation, cooking and assembly are as follows:
+                  1) Preparation is the stage where raw ingredients are prepared, such as mixing, chopping, grating, etc. No heating is allowed during this stage.\
+                  2) Cooking is the stage where ingredients are cooked, such as boiling, frying, baking, etc.\
+                  3) Assembly is the stage where cooked ingredients are assembled into a finished dish.\
+                Each subtask should not have more than {length} steps, merge steps that are too detailed.
                 
                 Transcript:{transcript}
             ''',
         )
         output_parser = StrOutputParser()
         chain = (
-            {"transcript": RunnablePassthrough()}
+            {"transcript": RunnablePassthrough(), "length": RunnablePassthrough()}
             | cookingStepsProcessor
             | self.llm
             | output_parser
         )
 
-        cookingStepsRaw = chain.invoke(transcript)
+        cookingStepsRaw = chain.invoke({
+            "transcript": transcript, "length": step_length})
 
         json_parser = JsonOutputParser(pydantic_object=CookingSteps)
 

@@ -1,5 +1,5 @@
 import React, {useState} from "react";
-import { Typography, Flex, Button } from "antd";
+import { Typography, Flex, Button, Divider } from "antd";
 import { DownOutlined } from "@ant-design/icons";
 import TagChecker from "./tagChecker";
 import { VideoState } from "../types/InfoTypes";
@@ -16,13 +16,14 @@ const StepItem: React.FC<StepItemProps> = (props: StepItemProps) => {
 
   return (
     <>
-      <Flex vertical={false}>
+      <Flex vertical={false} align="center">
         <TagChecker videoItems={videoItems} />
-        <Text>{stepDescription}</Text>
-        <Button shape="circle" size="small">
+        <Text style={{ textAlign: "justify"}}>{stepDescription}</Text>
+        {/* <Button shape="circle" size="small">
           <DownOutlined />
-        </Button>
+        </Button> */}
       </Flex>
+      <Divider style={{ margin: "8px 0 0 0"}} />
     </>
   );
 };
