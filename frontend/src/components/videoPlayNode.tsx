@@ -29,6 +29,7 @@ import {
 import { milestoneBgColor, milestoneFgColor } from "../looks/coloring";
 import { SERVER_URL } from "../consts/server";
 import axios from "axios";
+import { modifyNodeInfo } from "../reducers/setDataReducer";
 
 const { Text } = Typography;
 
@@ -206,6 +207,10 @@ export default memo((props: CustomColorPickerNodeProps) => {
                   setDescription(value);
                   // need to sync with the data store (maybe use redux here)
                 },
+                // onEnd: () => dispatch(modifyNodeInfo({
+                //   node_id: nodeState.node_id,
+                //   description: nodeState.description,
+                // })),
               }}
             >
               {nodeState.description}

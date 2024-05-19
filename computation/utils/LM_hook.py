@@ -153,7 +153,6 @@ class GLM_langchain:
 
         cookingStepsRaw = chain.invoke(transcript)
 
-
         json_parser = JsonOutputParser(pydantic_object=CookingSteps)
         cookStepOrganizer = PromptTemplate(
             input_variables=["description"],
@@ -180,6 +179,80 @@ class GLM_langchain:
 
         cookingStepsFormatted = cookStepOrganizerChain.invoke(cookingStepsRaw)
         return cookingStepsFormatted
+
+    def classification(self, step):
+        str_parser = StrOutputParser()
+        classificationProcessor = PromptTemplate(
+            input_variables=["step"],
+            template='''
+                You are a helpful assistant. You will be provided with a step of a cooking video.
+                Your task is to classify the step into preparation, cooking, and assembly.
+
+                The definition of preparation, cooking and assembly are as follows:
+                1. Preparation is the stage where raw ingredients are prepared, such as mixing, chopping, grating, etc. No heating, i.e., using temperature to cook ingredients, is allowed during this stage.
+                2. Cooking is the stage where ingredients are cooked, such as boiling, frying, baking, etc.
+                3. Assembly is the stage where cooked ingredients are assembled into a finished dish.
+                
+                Here are seven examples:
+                Example 1
+                Step: Fry the potatoes with high heat to get it nice and crispy.
+                Thinking: The potatoes are being fried, indicating the use of heat. The heat is high, indicating that it is a cooking step.
+                Category: cooking
+
+                Example 2
+                Step: Boil the water and add the pasta.
+                Thinking: The water is being boiled, indicating the use of heat. Pasta will be processed from raw to cooked, so it is a cooking step.
+                Category: cooking
+
+                Example 3
+                Step: Stir the eggs with a fork until they are well mixed.
+                Thinking: The eggs are not cooked yet, indicating that it is a preparation step.
+                Category: preparation
+
+                Example 4
+                Step: Thinly chop lettuce and put it into a bowl.
+                Thinking: The lettuce is in its raw form, indicating that it is a preparation step.
+                Category: preparation
+
+                Example 5
+                Step: Place the cooked rice in a serving dish and top with a dollop of sour cream.
+                Thinking: The object is cooked rice and it is put on a serving dish, indicating that it is an assembly step.
+                Category: assembly
+
+                Example 6
+                Step: Grate the cheese over the top of the baked potatoes.
+                Thinking: The cheese is grated over baked potatoes, indicating that the potatoes are ready to serve, which is an assembly step.
+                Category: assembly
+
+                Example 7
+                Step: Sear the fat on the side of the steak for 30 seconds.
+                Thinking: The fat is being seared, indicating that it is a cooking step.
+                Category: cooking
+
+                Based on the examples, classify the following step into preparation, cooking, or assembly:
+                Step:{step}
+                Category: 
+                '''
+        )
+
+        chain = (
+            {"step": RunnablePassthrough()}
+            | classificationProcessor
+            | self.llm
+            | str_parser
+        )
+
+        classification = chain.invoke(step)
+        # check substring
+        if "preparation" in classification:
+            return "preparation"
+        elif "cooking" in classification:
+            return "cooking"
+        elif "assembly" in classification:
+            return "assembly"
+        else:
+            return ""
+
 
     def getSequentialCookingSteps(self, transcript):
         numberedListParser = NumberedListOutputParser()

@@ -17,7 +17,7 @@ import {
   Divider,
 } from "antd";
 import {
-  RedoOutlined,
+  SaveOutlined,
   CloseOutlined,
   PlusOutlined,
   QuestionOutlined,
@@ -42,6 +42,7 @@ import {
   addNewIngredient,
   deleteSelectedIngredient,
   replaceExistingIngredient,
+  saveDataState,
   setIngredientSelection,
 } from "../reducers/setDataReducer";
 
@@ -277,6 +278,7 @@ export default function IngredientMap() {
         </div> */}
         <div style={{ width: "100%" }}>
           <Flex justify="space-between" wrap="wrap" gap="small">
+            <Button shape="circle" icon={<SaveOutlined />} onClick={() => dispatch(saveDataState())} />
             {/* <Select
               options={dropDownItems}
               onChange={refreshFilter}

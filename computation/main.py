@@ -62,16 +62,16 @@ def instructional_cooking_video_knowledge_extraction_computation_pipeline(
 
     weightGenerator = probabilityWeighting(sequentialCookingSteps, complexSceneList)
     weighted_sequential_steps = weightGenerator.getWeightingVector()
-    weighted_milestoned_steps = {}
-    for key, val in milestonedCookingSteps.items():
-        tempWG = probabilityWeighting(val, complexSceneList)
-        weighted_milestoned_steps[key] = tempWG.getWeightingVector()
+    # weighted_milestoned_steps = {}
+    # for key, val in milestonedCookingSteps.items():
+    #     tempWG = probabilityWeighting(val, complexSceneList)
+    #     weighted_milestoned_steps[key] = tempWG.getWeightingVector()
 
     cookingStepsTotal = milestonedCookingSteps
     cookingStepsTotal["sequential"] = sequentialCookingSteps
 
-    cookingStepsTotalWeight = weighted_milestoned_steps
-    cookingStepsTotalWeight["sequential"] = weighted_sequential_steps
+    # cookingStepsTotalWeight = weighted_milestoned_steps
+    # cookingStepsTotalWeight["sequential"] = weighted_sequential_steps
 
     print("- Extracting Food Entities")
     foodEntityRecognition = foodNER()
@@ -84,10 +84,39 @@ def instructional_cooking_video_knowledge_extraction_computation_pipeline(
         dictionary_filepath=vlm_dictionary_filepath,
         video_filepath=f".cache/{video_name}/")
     
-    # weightedTags = visionLanguageModel.weighted_instructiontag(weighted_sequential_steps)
+    weightedTags = visionLanguageModel.weighted_instructiontag(weighted_sequential_steps)
+
+    for key, val in tqdm(weightedTags.items()):
+        step = val["description"]
+        cla = languageModel_GLM.classification(step)
+        val["category"] = cla
     
-    tagged_cooking_steps = visionLanguageModel.regrouped_steps_vidtag(
-        cookingStepsTotalWeight)
+    # write back to default style
+    tagged_cooking_steps = {
+        "preparation": {},
+        "cooking": {},
+        "assembly": {},
+        "sequential": weightedTags
+    }
+
+    i, j, k = 1, 1, 1
+    for key, val in weightedTags.items():
+        if val["category"] == "preparation":
+            tagged_cooking_steps["preparation"][f"step_{i}"] = val
+            i += 1
+            continue
+        elif val["category"] == "cooking":
+            tagged_cooking_steps["cooking"][f"step_{k}"] = val
+            k += 1
+            continue
+        elif val["category"] == "assembly":
+            tagged_cooking_steps["assembly"][f"step_{j}"] = val
+            k += 1
+            continue
+        else:
+            continue
+
+    # tagged_cooking_steps = visionLanguageModel.regrouped_steps_vidtag(cookingStepsTotalWeight)
     
     # tagged_cooking_steps["sequential"] = weightedTags
     
@@ -139,14 +168,16 @@ if __name__ == "__main__":
     videoList = [
         # "Steak-GR",
         # "Steak-Wolfgang",
-        # "GR-SzechuanChicken",
+        "GR-SzechuanChicken",
         # "GR-Branzino",
         # "GR-Souffle",
         # "Shorts-GR-ChilliChicken",
         # 'Shorts-GR-SweetPepperSause',
         # "Shorts-GR-MoroccanLamb",
         # "Shorts-GR-SpicyBlackBeans",
-        "GR-FishChips"
+        # "GR-FishChips"
+        # "GR-ShortRibs",
+        # "GR-WellingtonBeef"
     ]
     for video in videoList:
         instructional_cooking_video_knowledge_extraction_computation_pipeline(

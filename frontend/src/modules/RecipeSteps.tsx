@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "../store";
 import { Button, Typography, Space } from "antd";
@@ -13,8 +13,8 @@ const { Text } = Typography;
 export default function RecipeSteps() {
   const configData = useSelector((state: RootState) => state.setData);
   const seqentialRecipe = configData.steps.sequential;
-
   const sceneList = configData.sceneList
+
 
   return (
     <div>

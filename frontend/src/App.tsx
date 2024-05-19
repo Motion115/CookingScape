@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Layout, ConfigProvider, Typography, Row, Col, Button, FloatButton, Drawer, Divider } from "antd";
+import { Layout, ConfigProvider, Typography, Row, Col, Button, FloatButton, Drawer, Divider, Switch } from "antd";
 import THEME from "./looks/theme";
 import VideoPlayer from "./modules/videoPlayer";
 import IngredientMap from "./modules/IngredientMap";
@@ -11,6 +11,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "./store";
 import { loadDataAsync } from "./reducers/setDataReducer";
+import MilestoneInterfaceSeq from "./modules/MilestoneStepsSeq";
 
 const { Header, Content, Footer } = Layout;
 const { Text, Paragraph } = Typography;
@@ -19,7 +20,7 @@ const App: React.FC = () => {
   // const configData = useSelector((state: RootState) => state.setData);
   const dispatch = useDispatch<AppDispatch>();
 
-  const video = "GR-FishChips";
+  const video = "GR-SzechuanChicken";
   const folder = "./data/" + video + "/";
 
   const loadData = () => {
@@ -31,6 +32,7 @@ const App: React.FC = () => {
   })
 
   const [isInfoOpen, setIsInfoOpen] = React.useState(false);
+  const [switchSeq, setSwitchSeq] = React.useState(true);
 
   return (
     <div className="app">
@@ -50,8 +52,9 @@ const App: React.FC = () => {
                 <IngredientMap />
               </Col>
               <Col span={18}>
+                {/* <Switch value={switchSeq} onClick={() => setSwitchSeq(!switchSeq)}></Switch> */}
                 <div style={{ width: "100%", height: "420px" }}>
-                  <MilestoneSteps />
+                  {switchSeq ? <MilestoneInterfaceSeq /> : <MilestoneSteps />}
                 </div>
               </Col>
               <Col span={6}>

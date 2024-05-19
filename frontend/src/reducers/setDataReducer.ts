@@ -15,6 +15,12 @@ const setDataSlice = createSlice({
   name: "setData",
   initialState,
   reducers: {
+    modifyNodeInfo: (state, action) => {
+      state.steps.sequential[action.payload.node_id] = {
+        ...state.steps.sequential[action.payload.node_id],
+        description: action.payload.description,
+      };
+    },
     addNewIngredient: (state, action) => {
       state.ingredients = [ ...state.ingredients, action.payload ];
       // console.log(action.payload);
@@ -52,6 +58,29 @@ const setDataSlice = createSlice({
       })
       state.ingredients = currentList;
     },
+    saveDataState: (state) => {
+      let saveDoc = lodash.cloneDeep(state) as {[key: string]: any}
+      // map saveDoc.ingredients into [key:string]: number[]
+      let ingredientList: {[key: string]: number[]} = {};
+      saveDoc.ingredients.forEach((item: ingredientsItem) => {
+        ingredientList[item.ingredient] = item.similarity_vector
+      })
+      saveDoc.ingredients = ingredientList;
+      let sceneList = saveDoc.sceneList;
+      delete saveDoc.sceneList;
+      saveDoc.scene_list = sceneList;
+      let stringFlow = JSON.stringify(saveDoc);
+
+      const blob = new Blob([stringFlow], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "video_info.json";
+      link.click();
+
+      URL.revokeObjectURL(url);
+    }
   },
   extraReducers: (builder) => {
     builder.addCase(loadDataAsync.fulfilled, (state, action) => {
@@ -94,7 +123,9 @@ export const {
   addNewIngredient,
   replaceExistingIngredient,
   deleteSelectedIngredient,
-  setIngredientSelection
+  setIngredientSelection,
+  saveDataState,
+  modifyNodeInfo
 } = setDataSlice.actions;
 
 export default setDataSlice.reducer;

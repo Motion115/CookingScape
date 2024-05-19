@@ -25,12 +25,14 @@ export interface IndividualStep {
 export interface RecipeStepDescription {
   description: string;
   clip_id: number[];
+  category?: string;
 }
 
 export interface SceneListItem {
   [key: string]: {
     startTime: number;
-    duration: number
+    duration: number;
+    endTime: number;
   }
 }
 
