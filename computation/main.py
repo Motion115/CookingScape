@@ -166,18 +166,19 @@ def instructional_cooking_video_knowledge_extraction_computation_pipeline(
 
 if __name__ == "__main__":
     videoList = [
-        # "Steak-GR",
-        # "Steak-Wolfgang",
-        "GR-SzechuanChicken",
         # "GR-Branzino",
+        # "GR-ShortRibs",
         # "GR-Souffle",
+        # "GR-SzechuanChicken",
+        # "GR-WellingtonBeef",
+        # "GR-FishChips",
+        "Steak-GR",
+        # "Steak-Wolfgang",
+
         # "Shorts-GR-ChilliChicken",
         # 'Shorts-GR-SweetPepperSause',
         # "Shorts-GR-MoroccanLamb",
         # "Shorts-GR-SpicyBlackBeans",
-        # "GR-FishChips"
-        # "GR-ShortRibs",
-        # "GR-WellingtonBeef"
     ]
     for video in videoList:
         instructional_cooking_video_knowledge_extraction_computation_pipeline(

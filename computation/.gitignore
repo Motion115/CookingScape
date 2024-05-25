@@ -1,6 +1,7 @@
 # project exclusions
 data/
 .cache/
+.cache0/
 *.npy
 *.pth
 

@@ -102,7 +102,7 @@ class Video:
         video = scenedetect.open_video(video_path)
         scene_manager = scenedetect.SceneManager()
         # scene_manager.add_detector(
-        #     scenedetect.ContentDetector(threshold=threshold))
+        #     scenedetect.ContentDetector(threshold=27))
         scene_manager.add_detector(
             scenedetect.AdaptiveDetector(adaptive_threshold=threshold, min_scene_len=min_scene_len)
         )
