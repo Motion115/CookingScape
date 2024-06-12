@@ -1,6 +1,18 @@
 import os
 import shutil
 
+def cleanScene():
+    dir = "./.cache/"
+    for filename in os.listdir(dir):
+        # delete clip folder
+        if os.path.exists(os.path.join(dir, filename, "clip")):
+            shutil.rmtree(os.path.join(dir, filename, "clip"))
+        # delete scene folder
+        if os.path.exists(os.path.join(dir, filename, "scene")):
+            shutil.rmtree(os.path.join(dir, filename, "scene"))
+        if os.path.exists(os.path.join(dir, filename, "scene_list.csv")):
+            os.remove(os.path.join(dir, filename, "scene_list.csv"))
+
 def cleanEmbeddingOnly():
     dir = "./.cache/"
     for filename in os.listdir(dir):

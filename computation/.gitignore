@@ -2,6 +2,7 @@
 data/
 .cache/
 .cache0/
+.cacheTest/
 *.npy
 *.pth
 

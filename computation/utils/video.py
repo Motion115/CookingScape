@@ -42,7 +42,8 @@ class Video:
             # use ffmpeg to split the audio from the original video
             target_audio_path = os.path.join('.cache/' + self.file_name, self.file_name + '.mp3')
             target_video_path = os.path.join('.cache/' + self.file_name, self.file_name + '.mp4')
-            os.system(f"ffmpeg -i {file_path} -c:v copy -an {target_video_path} -vn -acodec libmp3lame -q:a 2 {target_audio_path}")
+            os.system(
+                f"ffmpeg -loglevel quiet -i {file_path} -c:v copy -an {target_video_path} -vn -acodec libmp3lame -q:a 2 {target_audio_path}")
         else:
             print(f"- Folder .cache/{self.file_name} already exists.")
             return

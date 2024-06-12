@@ -20,7 +20,9 @@ const App: React.FC = () => {
   // const configData = useSelector((state: RootState) => state.setData);
   const dispatch = useDispatch<AppDispatch>();
 
-  const video = "GR-FishChips";
+  // const video = "Wolfgang-Gazpacho";
+  // const folder = "./data/.cacheTest/" + video + "/";
+  const video = "GR-SzechuanChicken";
   const folder = "./data/" + video + "/";
 
   const loadData = () => {

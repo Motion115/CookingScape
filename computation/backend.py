@@ -42,7 +42,7 @@ def getModels(
 
 llm, vlm, video = getModels(
         video_file_path="./data/",
-        video_name="GR-FishChips",
+        video_name="GR-SzechuanChicken",
         video_encoding=".mp4",
         glm_token_file="./utils/api_config.json",
         vlm_weight_path="utils/S3D/s3d_howto100m.pth",

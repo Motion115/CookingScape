@@ -19,7 +19,7 @@ def instructional_cooking_video_knowledge_extraction_computation_pipeline(
     glm_token_file: str,
     vlm_weight_path: str,
     vlm_dictionary_filepath: str,
-    shortForm = False,
+    shortForm=False,
     persistent_calc=False
 ):
     video_info_directory = f"./.cache/{video_name}"
@@ -35,8 +35,12 @@ def instructional_cooking_video_knowledge_extraction_computation_pipeline(
         encoding=video_encoding,
         ASR_model_path=whisper_ASR_model_path,
         isShortForm=shortForm)
-    
+
     complexSceneList = videoPreprocessingModel.get_scene_list()
+    if len(complexSceneList) == 0:
+        with open(f"{video_info_directory}/video_info.json", "w") as f:
+            json.dump({"error": "No scene detected"}, f)
+        return
 
     transcript = videoPreprocessingModel.get_transcript()[0]
 
@@ -44,14 +48,14 @@ def instructional_cooking_video_knowledge_extraction_computation_pipeline(
 
     print("- Extracting Cooking Steps")
     milestonedCookingSteps = languageModel_GLM.getCookingSteps(transcript)
-    sequentialCookingSteps = languageModel_GLM.getSequentialCookingSteps(transcript)
+    sequentialCookingSteps = languageModel_GLM.getSequentialCookingSteps(
+        transcript)
 
     # print(milestonedCookingSteps, sequentialCookingSteps)
 
     # save cooking steps as json
     # with open("./milestonedCookingSteps.json", "w") as f:
     #     json.dump(milestonedCookingSteps, f)
-
 
     # load cookingSteps.json
     # with open("./milestonedCookingSteps.json", "r") as f:
@@ -60,7 +64,8 @@ def instructional_cooking_video_knowledge_extraction_computation_pipeline(
     # with open("./seqCookingSteps.json", "r") as f:
     #     sequentialCookingSteps = json.load(f)
 
-    weightGenerator = probabilityWeighting(sequentialCookingSteps, complexSceneList)
+    weightGenerator = probabilityWeighting(
+        sequentialCookingSteps, complexSceneList)
     weighted_sequential_steps = weightGenerator.getWeightingVector()
     # weighted_milestoned_steps = {}
     # for key, val in milestonedCookingSteps.items():
@@ -83,14 +88,15 @@ def instructional_cooking_video_knowledge_extraction_computation_pipeline(
         weight_filepath=vlm_weight_path,
         dictionary_filepath=vlm_dictionary_filepath,
         video_filepath=f".cache/{video_name}/")
-    
-    weightedTags = visionLanguageModel.weighted_instructiontag(weighted_sequential_steps)
+
+    weightedTags = visionLanguageModel.weighted_instructiontag(
+        weighted_sequential_steps)
 
     for key, val in tqdm(weightedTags.items()):
         step = val["description"]
         cla = languageModel_GLM.classification(step)
         val["category"] = cla
-    
+
     # write back to default style
     tagged_cooking_steps = {
         "preparation": {},
@@ -117,12 +123,12 @@ def instructional_cooking_video_knowledge_extraction_computation_pipeline(
             continue
 
     # tagged_cooking_steps = visionLanguageModel.regrouped_steps_vidtag(cookingStepsTotalWeight)
-    
+
     # tagged_cooking_steps["sequential"] = weightedTags
-    
+
     tagged_ingredients = visionLanguageModel.ingredients_vidtag(
         ingredientsList)
-    
+
     print("- Evaluating difficulty")
     # 5-shot decision-making
     ratingList = []
@@ -165,24 +171,33 @@ def instructional_cooking_video_knowledge_extraction_computation_pipeline(
 
 
 if __name__ == "__main__":
-    videoList = [
-        # "GR-Branzino",
-        # "GR-ShortRibs",
-        # "GR-Souffle",
-        # "GR-SzechuanChicken",
-        # "GR-WellingtonBeef",
-        # "GR-FishChips",
-        "Steak-GR",
-        # "Steak-Wolfgang",
+    # filePath = "./data/New/"
+    # videos = os.listdir(filePath)
+    # videoList = []
+    # for video in videos:
+    #     videoList.append(video[:-4])
 
-        # "Shorts-GR-ChilliChicken",
-        # 'Shorts-GR-SweetPepperSause',
-        # "Shorts-GR-MoroccanLamb",
-        # "Shorts-GR-SpicyBlackBeans",
-    ]
+    # videoList = [
+    #     # "GR-Branzino",
+    #     # "GR-ShortRibs",
+    #     # "GR-Souffle",
+    #     # "GR-SzechuanChicken",
+    #     # "GR-WellingtonBeef",
+    #     # "GR-FishChips",
+    #     "Steak-GR",
+    #     # "Steak-Wolfgang",
+
+    #     # "Shorts-GR-ChilliChicken",
+    #     # 'Shorts-GR-SweetPepperSause',
+    #     # "Shorts-GR-MoroccanLamb",
+    #     # "Shorts-GR-SpicyBlackBeans",
+    # ]
+
+    videoList = ["Wolfgang-Gazpacho"]
     for video in videoList:
+        print(f"- Processing {video}")
         instructional_cooking_video_knowledge_extraction_computation_pipeline(
-            video_file_path="./data/",
+            video_file_path="./data/New/",
             video_name=video,
             video_encoding=".mp4",
             whisper_ASR_model_path="E:/Data(E)/Models/Openai-Whisper",
